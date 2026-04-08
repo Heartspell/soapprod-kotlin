@@ -1,0 +1,24 @@
+<h1>Production</h1>
+<p class="page-intro">Post production output to increase finished goods stock based on configured ingredient usage.</p>
+{{message}}
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Production history</h2>
+                <p>Posted production operations and responsible employees.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>Date</th><th>Product</th><th>Qty</th><th>Employee</th><th>Actions</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

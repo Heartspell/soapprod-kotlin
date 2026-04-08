@@ -1,0 +1,23 @@
+<h1>Employees</h1>
+<p class="page-intro">Maintain employee cards, assigned positions, and payroll base values used by salary operations.</p>
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Employee list</h2>
+                <p>Current personnel records available in the system.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>ID</th><th>Full name</th><th>Position</th><th>DOB</th><th>Salary</th><th>Home address</th><th>Actions</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

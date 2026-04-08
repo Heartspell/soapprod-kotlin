@@ -1,0 +1,41 @@
+<h1>Budget</h1>
+<p class="page-intro">Track available funds and active credits in one finance workspace.</p>
+
+<div class="budget-shell">
+    <div class="budget-forms">
+        <section class="section-card budget-funds-card">
+            <div class="budget-funds-grid">
+                <div>
+                    <label>Credit funds</label>
+                    <strong>{{creditFunds}}</strong>
+                </div>
+                <div>
+                    <label>Non-credit funds</label>
+                    <strong>{{nonCreditFunds}}</strong>
+                </div>
+            </div>
+        </section>
+        {{budgetFormSection}}
+        {{creditFormSection}}
+    </div>
+
+    <section class="section-card budget-register-card">
+        <h2>Credits</h2>
+        <div class="budget-table-wrap">
+            <table border="1" cellpadding="4" cellspacing="0">
+                <tr>
+                    <th>Bank</th>
+                    <th>Amount</th>
+                    <th>Rate</th>
+                    <th>Term</th>
+                    <th>Start</th>
+                    <th>Monthly</th>
+                    <th>Remaining</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+                {{creditRows}}
+            </table>
+        </div>
+    </section>
+</div>

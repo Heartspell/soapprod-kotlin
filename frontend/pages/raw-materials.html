@@ -1,0 +1,23 @@
+<h1>Raw materials</h1>
+<p class="page-intro">Directory values are maintained here. Stock and amount are updated only through purchase operations.</p>
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Material list</h2>
+                <p>Current stock positions for raw materials.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>ID</th><th>Name</th><th>Unit</th><th>Quantity</th><th>Amount</th><th>Actions</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

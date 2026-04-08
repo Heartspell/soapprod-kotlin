@@ -1,0 +1,23 @@
+<h1>Salaries</h1>
+<p class="page-intro">Register payroll payments using the employee base salary or an explicit payment amount.</p>
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Payment history</h2>
+                <p>Completed payroll payments recorded in the system.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>Id</th><th>Employee</th><th>Amount</th><th>Date</th><th>Note</th><th>Action</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

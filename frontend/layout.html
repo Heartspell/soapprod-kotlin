@@ -1,0 +1,330 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}}</title>
+    <style>
+        @media (max-width: 980px) {
+            .app-sidebar {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: min(280px, 84vw);
+                height: 100vh;
+                transform: translateX(100%);
+                visibility: hidden;
+            }
+
+            body.menu-open .app-sidebar {
+                transform: translateX(0);
+                visibility: visible;
+            }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/modern-normalize/3.0.1/modern-normalize.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Manrope:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="app-page">
+    <div class="page-loader">
+        <div class="page-loader-box animate__animated animate__pulse animate__infinite">
+            <span class="page-loader-dot"></span>
+            <span class="page-loader-copy">
+                <span class="page-loader-text">Loading page</span>
+                <span class="page-loader-subtext">Preparing {{title}}</span>
+            </span>
+        </div>
+    </div>
+    <div class="mobile-topbar">
+        <div class="mobile-topbar-title">
+            <span class="mobile-topbar-label">Budget</span>
+            <span class="mobile-topbar-value">{{budget}}</span>
+            {{budgetCredit}}
+        </div>
+    </div>
+    <button class="mobile-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="app-sidebar">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    <div class="mobile-menu-backdrop"></div>
+    <div class="app-shell">
+        <aside class="app-sidebar" id="app-sidebar">
+            <div class="sidebar-top">
+                <div class="logo-container">
+                    <div class="logo-text">
+                        <span class="logo-brand">Soap Production</span>
+                        <span class="logo-title">Budget</span>
+                        <span class="logo-subtitle">{{budget}}</span>
+                        {{budgetCredit}}
+                    </div>
+                </div>
+
+                <div class="profile-card">
+                    <span class="profile-label">Signed in</span>
+                    <strong class="profile-name">{{username}}</strong>
+                    <span class="profile-roles">{{roles}}</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-label">Navigation</div>
+                <nav class="app-nav">
+                    {{nav}}
+                </nav>
+            </div>
+
+            <div class="app-sidebar-footer">
+                <a class="logout-link" href="/logout">Logout</a>
+            </div>
+        </aside>
+
+        <main class="app-main animate__animated animate__fadeIn">
+            <div class="app-content">
+                {{content}}
+            </div>
+        </main>
+    </div>
+</body>
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+<script>
+(() => {
+    const loaderStartedAt = performance.now();
+    const minimumLoaderVisibleMs = 450;
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    const message = params.get('message');
+    const text = error || message;
+    if (text) {
+        alert(text);
+        params.delete('error');
+        params.delete('message');
+        const next = params.toString();
+        const url = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', url);
+    }
+
+    const loader = document.querySelector('.page-loader');
+    const loaderText = document.querySelector('.page-loader-text');
+    const loaderSubtext = document.querySelector('.page-loader-subtext');
+    const pageTitle = (document.title || '').trim() || 'page';
+    if (loaderText) loaderText.textContent = `Loading ${pageTitle}`;
+    if (loaderSubtext) loaderSubtext.textContent = `Preparing ${pageTitle}`;
+    window.addEventListener('load', () => {
+        if (!loader) return;
+        const elapsed = performance.now() - loaderStartedAt;
+        const hideLoader = () => {
+            loader.classList.add('animate__animated', 'animate__fadeOut');
+            window.setTimeout(() => {
+                loader.style.display = 'none';
+            }, 350);
+        };
+        window.setTimeout(hideLoader, Math.max(0, minimumLoaderVisibleMs - elapsed));
+    });
+
+    document.querySelectorAll('.app-nav a').forEach((link) => {
+        const href = (link.getAttribute('href') || '').toLowerCase();
+        const icon = document.createElement('i');
+        let iconClass = 'fa-regular fa-circle';
+        if (href === '/') iconClass = 'fa-solid fa-house';
+        if (href.includes('/units')) iconClass = 'fa-solid fa-ruler';
+        if (href.includes('/positions')) iconClass = 'fa-solid fa-briefcase';
+        if (href.includes('/employees')) iconClass = 'fa-solid fa-users';
+        if (href.includes('/salary')) iconClass = 'fa-solid fa-money-bill-wave';
+        if (href.includes('/raw-materials')) iconClass = 'fa-solid fa-boxes-stacked';
+        if (href.includes('/products')) iconClass = 'fa-solid fa-cube';
+        if (href.includes('/ingredients')) iconClass = 'fa-solid fa-flask';
+        if (href.includes('/purchase')) iconClass = 'fa-solid fa-cart-shopping';
+        if (href.includes('/production')) iconClass = 'fa-solid fa-industry';
+        if (href.includes('/sales')) iconClass = 'fa-solid fa-cash-register';
+        if (href.includes('/reports')) iconClass = 'fa-solid fa-table-list';
+        if (href.includes('/budget')) iconClass = 'fa-solid fa-wallet';
+        if (href.includes('/admin/users')) iconClass = 'fa-solid fa-user-shield';
+        icon.className = `nav-icon ${iconClass}`;
+        link.classList.add('nav-link-icon');
+        link.prepend(icon);
+    });
+
+    document.querySelectorAll('.section-card, .app-content table, .app-content form, .profile-card, .form-actions, .secondary-actions, .app-nav .nav-group').forEach((element, index) => {
+        element.setAttribute('data-aos', 'fade-up');
+        element.setAttribute('data-aos-duration', '420');
+        element.setAttribute('data-aos-delay', `${Math.min(index * 35, 180)}`);
+        element.setAttribute('data-aos-once', 'true');
+    });
+
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    const parseValue = (value) => {
+        const textValue = String(value || '').trim();
+        if (!textValue) return { type: 'empty', value: '' };
+
+        const normalizedNumber = textValue
+            .replace(/\s+/g, '')
+            .replace(/,/g, '.')
+            .replace(/%$/, '');
+        if (/^-?\d+(\.\d+)?$/.test(normalizedNumber)) {
+            return { type: 'number', value: Number(normalizedNumber) };
+        }
+
+        const timestamp = Date.parse(textValue);
+        if (!Number.isNaN(timestamp)) {
+            return { type: 'date', value: timestamp };
+        }
+
+        return { type: 'text', value: textValue.toLowerCase() };
+    };
+
+    const compareValues = (left, right) => {
+        if (left.type === 'empty' && right.type === 'empty') return 0;
+        if (left.type === 'empty') return 1;
+        if (right.type === 'empty') return -1;
+        if (left.type === right.type && (left.type === 'number' || left.type === 'date')) {
+            return left.value - right.value;
+        }
+        return collator.compare(String(left.value), String(right.value));
+    };
+
+    const applyResponsiveTableLabels = (table) => {
+        const rows = Array.from(table.querySelectorAll('tr'));
+        if (rows.length < 2) return;
+        const headers = Array.from(rows[0].children).map((header) => header.textContent.trim());
+        rows.slice(1).forEach((row) => {
+            const cells = Array.from(row.children);
+            if (cells.length !== headers.length) return;
+            cells.forEach((cell, index) => {
+                cell.dataset.label = headers[index] || '';
+            });
+        });
+        table.classList.add('responsive-table');
+    };
+
+    document.querySelectorAll('.app-content table').forEach((table) => {
+        const rows = Array.from(table.querySelectorAll('tr'));
+        if (rows.length < 2) return;
+        applyResponsiveTableLabels(table);
+
+        const headerRow = rows[0];
+        const headers = Array.from(headerRow.children);
+        const bodyRows = rows.slice(1);
+        let defaultSortHeader = null;
+
+        headers.forEach((header, index) => {
+            const title = header.textContent.trim().toLowerCase();
+            if (title === 'id') {
+                defaultSortHeader = header;
+            }
+            if (!title || title === 'actions' || title === 'action') return;
+
+            header.classList.add('is-sortable');
+            header.dataset.sortDirection = 'none';
+
+            header.addEventListener('click', () => {
+                const nextDirection = header.dataset.sortDirection === 'asc' ? 'desc' : 'asc';
+                headers.forEach((item) => {
+                    if (item !== header) {
+                        item.dataset.sortDirection = 'none';
+                        item.classList.remove('is-sorted-asc', 'is-sorted-desc');
+                    }
+                });
+
+                const sortableRows = bodyRows
+                    .filter((row) => row.children.length === headers.length)
+                    .map((row, originalIndex) => ({ row, originalIndex }));
+
+                sortableRows.sort((left, right) => {
+                    const leftCell = left.row.children[index];
+                    const rightCell = right.row.children[index];
+                    const result = compareValues(
+                        parseValue(leftCell ? leftCell.textContent : ''),
+                        parseValue(rightCell ? rightCell.textContent : '')
+                    );
+                    if (result !== 0) {
+                        return nextDirection === 'asc' ? result : -result;
+                    }
+                    return left.originalIndex - right.originalIndex;
+                });
+
+                sortableRows.forEach(({ row }) => table.appendChild(row));
+                bodyRows
+                    .filter((row) => row.children.length !== headers.length)
+                    .forEach((row) => table.appendChild(row));
+
+                header.dataset.sortDirection = nextDirection;
+                header.classList.toggle('is-sorted-asc', nextDirection === 'asc');
+                header.classList.toggle('is-sorted-desc', nextDirection === 'desc');
+            });
+        });
+
+        if (defaultSortHeader && defaultSortHeader.classList.contains('is-sortable')) {
+            defaultSortHeader.click();
+        }
+    });
+
+    document.querySelectorAll('form[action$="/rollback"]').forEach((form) => {
+        form.addEventListener('submit', (event) => {
+            const ok = window.confirm('Rollback the last operation? This action will undo the most recent record.');
+            if (!ok) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    const toggle = document.querySelector('.mobile-menu-toggle');
+    const sidebar = document.querySelector('.app-sidebar');
+    const backdrop = document.querySelector('.mobile-menu-backdrop');
+    const mobileMedia = window.matchMedia('(max-width: 980px)');
+    if (toggle && sidebar && backdrop) {
+        const playMobileMenuAnimation = () => {
+            if (!mobileMedia.matches) return;
+            sidebar.classList.remove('is-mobile-animating');
+            void sidebar.offsetWidth;
+            sidebar.classList.add('is-mobile-animating');
+            window.setTimeout(() => {
+                sidebar.classList.remove('is-mobile-animating');
+            }, 420);
+        };
+        const closeMenu = () => {
+            document.body.classList.remove('menu-open');
+            toggle.setAttribute('aria-expanded', 'false');
+            sidebar.classList.remove('is-mobile-animating');
+        };
+        const openMenu = () => {
+            document.body.classList.add('menu-open');
+            toggle.setAttribute('aria-expanded', 'true');
+            playMobileMenuAnimation();
+        };
+        toggle.addEventListener('click', () => {
+            if (document.body.classList.contains('menu-open')) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+        backdrop.addEventListener('click', closeMenu);
+        sidebar.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', closeMenu);
+        });
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 900) {
+                closeMenu();
+            }
+        });
+    }
+
+    if (window.AOS) {
+        window.AOS.init({
+            once: true,
+            offset: 12,
+            easing: 'ease-out-cubic',
+            duration: 420,
+            disable: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        });
+    }
+})();
+</script>
+</html>

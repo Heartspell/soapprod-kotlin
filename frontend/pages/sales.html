@@ -1,0 +1,53 @@
+<h1>Sales</h1>
+<p class="page-intro">Sale amount is formed from the current product cost plus markup. Users only select product, quantity, employee, and date.</p>
+{{message}}
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Sales history</h2>
+                <p>Completed product sales with automatic pricing.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>Date</th><th>Product</th><th>Qty</th><th>Amount</th><th>Employee</th><th>Actions</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+(() => {
+    const product = document.getElementById('sales-product');
+    const quantity = document.getElementById('sales-quantity');
+    const available = document.getElementById('sales-available');
+    const unitCost = document.getElementById('sales-unit-cost');
+    const unitPrice = document.getElementById('sales-unit-price');
+    const amount = document.getElementById('sales-amount');
+    if (!product || !quantity || !available || !unitCost || !unitPrice || !amount) return;
+
+    const toNumber = (value) => Number(String(value).replace(',', '.')) || 0;
+    const render = () => {
+        const selected = product.options[product.selectedIndex];
+        const stock = selected ? toNumber(selected.dataset.available) : 0;
+        const cost = selected ? toNumber(selected.dataset.unitCost) : 0;
+        const price = selected ? toNumber(selected.dataset.salePrice) : 0;
+        const qty = toNumber(quantity.value);
+        available.value = stock.toFixed(3);
+        unitCost.value = cost.toFixed(2);
+        unitPrice.value = price.toFixed(2);
+        amount.value = (qty * price).toFixed(2);
+    };
+
+    product.addEventListener('change', render);
+    quantity.addEventListener('input', render);
+    render();
+})();
+</script>

@@ -1,0 +1,42 @@
+<h1>Purchase</h1>
+<p class="page-intro">Purchase documents replenish raw material stock and update the total amount automatically.</p>
+{{message}}
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Purchase history</h2>
+                <p>Posted raw material purchase operations.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>Date</th><th>Raw</th><th>Qty</th><th>Amount</th><th>Employee</th><th>Status</th><th>Actions</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+(() => {
+    const qty = document.getElementById('purchase-quantity');
+    const unitPrice = document.getElementById('purchase-unit-price');
+    const amount = document.getElementById('purchase-amount');
+    if (!qty || !unitPrice || !amount) return;
+
+    const toNumber = (value) => Number(String(value).replace(',', '.')) || 0;
+    const render = () => {
+        amount.value = (toNumber(qty.value) * toNumber(unitPrice.value)).toFixed(2);
+    };
+
+    qty.addEventListener('input', render);
+    unitPrice.addEventListener('input', render);
+    render();
+})();
+</script>

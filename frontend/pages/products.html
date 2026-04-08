@@ -1,0 +1,46 @@
+<h1>Products</h1>
+<p class="page-intro">Finished product stock is increased through production and decreased through sales. Quantity cannot be changed manually.</p>
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Product list</h2>
+                <p>Finished products with current stock values.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>ID</th><th>Name</th><th>Unit</th><th>Quantity</th><th>Cost</th><th>Actions</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+(() => {
+    const quantityInput = document.getElementById('product-quantity');
+    const unitCostInput = document.getElementById('product-unit-cost');
+    const salePriceInput = document.getElementById('product-sale-price');
+    const amountInput = document.getElementById('product-amount');
+
+    if (!amountInput || !quantityInput || !unitCostInput || !salePriceInput) return;
+
+    const toNumber = (value) => Number(String(value).replace(',', '.')) || 0;
+    const render = () => {
+        const quantity = toNumber(quantityInput.value);
+        const unitCost = toNumber(unitCostInput.value);
+        const salePrice = unitCost * 1.15;
+        amountInput.value = (quantity * unitCost).toFixed(2);
+        salePriceInput.value = salePrice.toFixed(2);
+    };
+
+    unitCostInput.addEventListener('input', render);
+    render();
+})();
+</script>

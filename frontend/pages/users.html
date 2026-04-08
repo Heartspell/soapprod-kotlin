@@ -1,0 +1,24 @@
+<h1>Users</h1>
+<p class="page-intro">Manage access, roles and password changes from one place.</p>
+{{error}}
+
+<div class="users-shell">
+    <div class="users-layout">
+        <div class="users-editor-column">
+            {{userFormSection}}
+        </div>
+
+        <div class="users-list-column">
+            <section class="section-card users-directory-card">
+                <div class="section-head">
+                    <h2>User directory</h2>
+                </div>
+                <div class="users-card-grid">
+                    {{rows}}
+                </div>
+            </section>
+        </div>
+    </div>
+
+    {{rolePermissionsSection}}
+</div>

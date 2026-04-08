@@ -1,0 +1,23 @@
+<h1>Positions</h1>
+<p class="page-intro">Configure staff positions used in employee cards and access management.</p>
+
+<div class="page-layout-2col">
+    <div class="page-sidebar-col">
+        {{formSection}}
+    </div>
+
+    <div class="page-table-col">
+        <section class="section-card table-card">
+            <div class="section-head">
+                <h2>Position list</h2>
+                <p>Defined staff roles for organizational records.</p>
+            </div>
+            <div class="table-wrap">
+                <table border="1" cellpadding="4" cellspacing="0">
+                    <tr><th>ID</th><th>Title</th><th>Actions</th></tr>
+                    {{rows}}
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

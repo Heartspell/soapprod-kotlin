@@ -1,0 +1,41 @@
+<h1>Reports</h1>
+<p class="page-intro">Operational reports for inventory valuation and sales analysis.</p>
+
+<section class="section-card table-card">
+    <div class="section-head">
+        <h2>Raw material inventory</h2>
+        <p>Available raw stock and its current valuation.</p>
+    </div>
+    <div class="table-wrap">
+        <table border="1" cellpadding="4" cellspacing="0">
+            <tr><th>Name</th><th>Unit</th><th>Qty</th><th>Unit cost</th><th>Total</th></tr>
+            {{rawRows}}
+        </table>
+    </div>
+</section>
+
+<section class="section-card table-card">
+    <div class="section-head">
+        <h2>Product inventory</h2>
+        <p>Finished goods quantity, cost per unit, and total value.</p>
+    </div>
+    <div class="table-wrap">
+        <table border="1" cellpadding="4" cellspacing="0">
+            <tr><th>Name</th><th>Unit</th><th>Qty</th><th>Unit cost</th><th>Total</th></tr>
+            {{productRows}}
+        </table>
+    </div>
+</section>
+
+<section class="section-card table-card">
+    <div class="section-head">
+        <h2>Sales report</h2>
+        <p>Completed sales operations with unit price and responsible employee.</p>
+    </div>
+    <div class="table-wrap">
+        <table border="1" cellpadding="4" cellspacing="0">
+            <tr><th>Date</th><th>Product</th><th>Qty</th><th>Unit price</th><th>Amount</th><th>Employee</th></tr>
+            {{salesRows}}
+        </table>
+    </div>
+</section>
