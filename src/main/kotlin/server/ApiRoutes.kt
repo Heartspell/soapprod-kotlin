@@ -84,7 +84,7 @@ internal fun AppServer.registerApiRoutes(router: Router) {
                     "employees" to employees.listAll().size,
                     "rawMaterials" to rawMaterials.listAll().size,
                     "products" to products.listAll().size,
-                    "sales" to productSales.listAll().size
+                    "sales" to saleService.listAll().size
                 )
             )
         )
@@ -259,7 +259,7 @@ internal fun AppServer.registerApiRoutes(router: Router) {
 
     router.get("/api/purchases").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Purchasing")) ?: return@coroutineHandler
-        apiJson(ctx, purchases.listAll())
+        apiJson(ctx, purchaseService.listAll())
     }
     router.post("/api/purchases").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Purchasing"), SessionPermission.EDIT, MODULE_PURCHASE) ?: return@coroutineHandler
@@ -272,21 +272,18 @@ internal fun AppServer.registerApiRoutes(router: Router) {
         if (rawMaterialId == null || employeeId == null || quantity == null || unitPrice == null) {
             apiError(ctx, 400, "Raw material, employee, quantity, and unit price are required"); return@coroutineHandler
         }
-        if (quantity <= 0.0 || unitPrice <= 0.0) {
-            apiError(ctx, 400, "Quantity and unit price must be greater than 0"); return@coroutineHandler
-        }
-        purchases.create(rawMaterialId, quantity, quantity * unitPrice, purchaseDate, employeeId)
+        purchaseService.create(rawMaterialId, quantity, unitPrice, purchaseDate, employeeId)
         apiJson(ctx, mapOf("ok" to true))
     }
     router.delete("/api/purchases/:id").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Purchasing"), SessionPermission.DELETE, MODULE_PURCHASE) ?: return@coroutineHandler
         val pathId = ctx.pathParam("id")?.toIntOrNull() ?: 0
-        if (pathId > 0) purchases.delete(pathId)
+        if (pathId > 0) purchaseService.delete(pathId)
         apiJson(ctx, mapOf("ok" to true))
     }
     router.post("/api/purchases/rollback").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Purchasing"), SessionPermission.DELETE, MODULE_PURCHASE) ?: return@coroutineHandler
-        purchases.deleteLast()
+        purchaseService.rollback()
         apiJson(ctx, mapOf("ok" to true))
     }
 
@@ -321,7 +318,7 @@ internal fun AppServer.registerApiRoutes(router: Router) {
 
     router.get("/api/sales").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Sales")) ?: return@coroutineHandler
-        apiJson(ctx, productSales.listAll())
+        apiJson(ctx, saleService.listAll())
     }
     router.post("/api/sales").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Sales"), SessionPermission.EDIT, MODULE_SALES) ?: return@coroutineHandler
@@ -333,19 +330,18 @@ internal fun AppServer.registerApiRoutes(router: Router) {
         if (productId == null || employeeId == null || quantity == null) {
             apiError(ctx, 400, "Product, employee, and quantity are required"); return@coroutineHandler
         }
-        if (quantity <= 0.0) { apiError(ctx, 400, "Quantity must be greater than 0"); return@coroutineHandler }
-        productSales.create(productId, quantity, saleDate, employeeId)
+        saleService.create(productId, quantity, saleDate, employeeId)
         apiJson(ctx, mapOf("ok" to true))
     }
     router.delete("/api/sales/:id").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Sales"), SessionPermission.DELETE, MODULE_SALES) ?: return@coroutineHandler
         val pathId = ctx.pathParam("id")?.toIntOrNull() ?: 0
-        if (pathId > 0) productSales.delete(pathId)
+        if (pathId > 0) saleService.delete(pathId)
         apiJson(ctx, mapOf("ok" to true))
     }
     router.post("/api/sales/rollback").coroutineHandler { ctx ->
         requireApiAuth(ctx, setOf("Admin", "Sales"), SessionPermission.DELETE, MODULE_SALES) ?: return@coroutineHandler
-        productSales.deleteLast()
+        saleService.rollback()
         apiJson(ctx, mapOf("ok" to true))
     }
 
