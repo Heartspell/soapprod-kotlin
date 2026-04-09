@@ -1,0 +1,16 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: soapprod-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Admin@123456"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./SoapProduction.bak:/var/opt/mssql/backup/SoapProduction.bak
+      - mssql-data:/var/opt/mssql/data
+
+volumes:
+  mssql-data:
