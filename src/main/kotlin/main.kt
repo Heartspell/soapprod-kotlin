@@ -1,6 +1,8 @@
+import config.DbClient
 import io.vertx.core.Vertx
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
+import server.AppServer
 
 fun main() = runBlocking {
     val vertx = Vertx.vertx()
