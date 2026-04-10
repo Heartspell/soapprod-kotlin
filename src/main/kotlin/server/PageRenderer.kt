@@ -11,7 +11,7 @@ internal fun AppServer.loginPage(error: String?): String {
 internal suspend fun AppServer.layoutPage(title: String, session: AuthSession, content: String): String {
     val budget = budgets.listAll().firstOrNull()?.budgetAmount
     val budgetLabel = budget?.toString() ?: "-"
-    val creditFunds = credits.listAll().filter { it.isActive }.sumOf { it.remainingAmount }
+    val creditFunds = creditService.listAll().filter { it.isActive }.sumOf { it.remainingAmount }
     val creditLabel = if (creditFunds > 0.0) {
         "<span class=\"budget-credit-note\">Credit (${format2(creditFunds)})</span>"
     } else ""

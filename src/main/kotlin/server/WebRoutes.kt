@@ -279,7 +279,7 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         val session = requireAuth(ctx, setOf("Admin", "Purchasing")) ?: return@coroutineHandler
         ctx.response()
             .putHeader("Content-Type", "text/html; charset=utf-8")
-            .end(purchasePage(session, purchases.listAll(), rawMaterials.listAll(), employees.listAll(), null))
+            .end(purchasePage(session, purchaseService.listAll(), rawMaterials.listAll(), employees.listAll(), null))
     }
 
     router.post("/purchase/save").coroutineHandler { ctx ->
@@ -292,23 +292,20 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         if (rawMaterialId == null || quantity == null || unitPrice == null || employeeId == null) {
             badRequest(ctx, "RawMaterialId, Quantity, UnitPrice, EmployeeId are required"); return@coroutineHandler
         }
-        if (quantity <= 0.0 || unitPrice <= 0.0) {
-            badRequest(ctx, "Quantity and UnitPrice must be greater than 0"); return@coroutineHandler
-        }
-        purchases.create(rawMaterialId, quantity, quantity * unitPrice, purchaseDate, employeeId)
+        purchaseService.create(rawMaterialId, quantity, unitPrice, purchaseDate, employeeId)
         redirect(ctx, "/purchase")
     }
 
     router.post("/purchase/delete").coroutineHandler { ctx ->
         requireAuth(ctx, setOf("Admin", "Purchasing"), SessionPermission.DELETE, MODULE_PURCHASE) ?: return@coroutineHandler
         val id = ctx.request().getParam("id")?.toIntOrNull() ?: 0
-        if (id > 0) purchases.delete(id)
+        if (id > 0) purchaseService.delete(id)
         redirect(ctx, "/purchase")
     }
 
     router.post("/purchase/rollback").coroutineHandler { ctx ->
         requireAuth(ctx, setOf("Admin", "Purchasing"), SessionPermission.DELETE, MODULE_PURCHASE) ?: return@coroutineHandler
-        purchases.deleteLast()
+        purchaseService.rollback()
         redirect(ctx, "/purchase")
     }
 
@@ -349,7 +346,7 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         val session = requireAuth(ctx, setOf("Admin", "Sales")) ?: return@coroutineHandler
         ctx.response()
             .putHeader("Content-Type", "text/html; charset=utf-8")
-            .end(salesPage(session, productSales.listAll(), products.listAll(), employees.listAll()))
+            .end(salesPage(session, saleService.listAll(), products.listAll(), employees.listAll()))
     }
 
     router.post("/sales/save").coroutineHandler { ctx ->
@@ -361,21 +358,20 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         if (productId == null || quantity == null || employeeId == null) {
             badRequest(ctx, "ProductId, Quantity, EmployeeId are required"); return@coroutineHandler
         }
-        if (quantity <= 0.0) { badRequest(ctx, "Quantity must be greater than 0"); return@coroutineHandler }
-        productSales.create(productId, quantity, saleDate, employeeId)
+        saleService.create(productId, quantity, saleDate, employeeId)
         redirect(ctx, "/sales")
     }
 
     router.post("/sales/delete").coroutineHandler { ctx ->
         requireAuth(ctx, setOf("Admin", "Sales"), SessionPermission.DELETE, MODULE_SALES) ?: return@coroutineHandler
         val id = ctx.request().getParam("id")?.toIntOrNull() ?: 0
-        if (id > 0) productSales.delete(id)
+        if (id > 0) saleService.delete(id)
         redirect(ctx, "/sales")
     }
 
     router.post("/sales/rollback").coroutineHandler { ctx ->
         requireAuth(ctx, setOf("Admin", "Sales"), SessionPermission.DELETE, MODULE_SALES) ?: return@coroutineHandler
-        productSales.deleteLast()
+        saleService.rollback()
         redirect(ctx, "/sales")
     }
 
@@ -412,10 +408,7 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         if (bankName.isBlank() || amount == null || rate == null || termMonths == null || startDate == null) {
             badRequest(ctx, "Bank, Amount, Rate, Term and Start date are required"); return@coroutineHandler
         }
-        if (amount <= 0.0 || termMonths <= 0) {
-            badRequest(ctx, "Amount and Term must be greater than 0"); return@coroutineHandler
-        }
-        credits.create(bankName, amount, rate, termMonths, startDate)
+        creditService.create(bankName, amount, rate, termMonths, startDate)
         redirect(ctx, "/budget")
     }
 
@@ -423,17 +416,15 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         requireAuth(ctx, setOf("Admin"), SessionPermission.EDIT, MODULE_BUDGET) ?: return@coroutineHandler
         val id = ctx.request().getParam("id")?.toIntOrNull() ?: 0
         val paymentAmount = ctx.request().getParam("paymentAmount")?.toDoubleOrNull()
-        if (id <= 0 || paymentAmount == null || paymentAmount <= 0.0) {
-            badRequest(ctx, "Credit and Payment amount are required"); return@coroutineHandler
-        }
-        credits.pay(id, paymentAmount)
+        if (paymentAmount == null) { badRequest(ctx, "Payment amount is required"); return@coroutineHandler }
+        creditService.pay(id, paymentAmount)
         redirect(ctx, "/budget")
     }
 
     router.post("/credits/delete").coroutineHandler { ctx ->
         requireAuth(ctx, setOf("Admin"), SessionPermission.DELETE, MODULE_BUDGET) ?: return@coroutineHandler
         val id = ctx.request().getParam("id")?.toIntOrNull() ?: 0
-        if (id > 0) credits.delete(id)
+        if (id > 0) creditService.delete(id)
         redirect(ctx, "/budget")
     }
 

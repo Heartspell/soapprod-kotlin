@@ -11,6 +11,9 @@ import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.kotlin.coroutines.coAwait
 import java.nio.file.Paths
 import repositories.*
+import services.CreditService
+import services.PurchaseService
+import services.SaleService
 import templates.TemplateRenderer
 
 class AppServer(
@@ -33,6 +36,10 @@ class AppServer(
     internal val salaries = SalaryPaymentRepository(db.pool)
     internal val credits = CreditRepository(db.pool)
 
+    internal val purchaseService = PurchaseService(purchases)
+    internal val saleService = SaleService(productSales)
+    internal val creditService = CreditService(credits)
+
     internal val authRepo = AuthRepository(db.pool)
     internal val authService = AuthService(authRepo)
     internal val sessions = mutableMapOf<String, AuthSession>()
@@ -40,7 +47,7 @@ class AppServer(
 
     suspend fun start(port: Int = 8080): HttpServer {
         authService.ensureSeed()
-        credits.ensureSchema()
+        creditService.ensureSchema()
 
         val router = Router.router(vertx)
         router.route().handler(BodyHandler.create())

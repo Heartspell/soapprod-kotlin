@@ -7,6 +7,7 @@ import io.vertx.ext.web.RoutingContext
 import io.vertx.kotlin.coroutines.dispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import services.ValidationException
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -138,6 +139,15 @@ internal fun Route.coroutineHandler(block: suspend (RoutingContext) -> Unit) {
         CoroutineScope(ctx.vertx().dispatcher()).launch {
             try {
                 block(ctx)
+            } catch (ex: ValidationException) {
+                if (!ctx.response().ended()) {
+                    val message = ex.message ?: "Validation error"
+                    if (ctx.normalizedPath().startsWith("/api/")) {
+                        apiError(ctx, 400, message)
+                    } else {
+                        redirectBackWithAlert(ctx, message)
+                    }
+                }
             } catch (ex: Exception) {
                 if (!ctx.response().ended()) {
                     val message = presentableErrorMessage(ex, ctx.normalizedPath())
