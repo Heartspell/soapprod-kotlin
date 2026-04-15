@@ -2,6 +2,8 @@ package server
 
 import auth.AuthSession
 import models.*
+import models.RequestStatus
+import java.time.format.DateTimeFormatter
 
 internal fun AppServer.loginPage(error: String?): String {
     val errorBlock = if (error.isNullOrBlank()) "" else "<div class=\"alert alert-error\">${html(error)}</div>"
@@ -723,17 +725,19 @@ internal suspend fun AppServer.budgetPage(session: AuthSession, list: List<Budge
         "<tr><td>${b.id}</td><td>${format2(b.budgetAmount)}</td></tr>"
     }
     val creditRows = creditList.joinToString("\n") { credit ->
-        val status = if (credit.isActive) "Active" else "Closed"
+        val statusClass = if (credit.isActive) "is-active" else "is-closed"
+        val statusText = if (credit.isActive) "Active" else "Closed"
+        val status = "<span class=\"credit-active-badge $statusClass\">$statusText</span>"
         val payForm = if (canEdit(session, MODULE_BUDGET)) {
-            "<form method=\"post\" action=\"/credits/pay\" style=\"display:inline\">" +
+            "<form method=\"post\" action=\"/credits/pay\" class=\"credit-pay-form\">" +
                 "<input type=\"hidden\" name=\"id\" value=\"${credit.id}\"/>" +
-                "<input name=\"paymentAmount\" placeholder=\"Pay\" style=\"width:84px\"/>" +
-                "<button type=\"submit\">Pay</button></form>"
+                "<input name=\"paymentAmount\" placeholder=\"Amount\" class=\"credit-pay-input\"/>" +
+                "<button type=\"submit\" class=\"action-link\">Pay</button></form>"
         } else ""
         val deleteForm = if (canDelete(session, MODULE_BUDGET)) {
-            "<form method=\"post\" action=\"/credits/delete\" style=\"display:inline\">" +
+            "<form method=\"post\" action=\"/credits/delete\" class=\"action-form\">" +
                 "<input type=\"hidden\" name=\"id\" value=\"${credit.id}\"/>" +
-                "<button type=\"submit\">Delete</button></form>"
+                "<button type=\"submit\" class=\"action-link action-link-delete\">Delete</button></form>"
         } else ""
         "<tr><td>${html(credit.bankName)}</td><td>${format2(credit.amount)}</td>" +
             "<td>${format2(credit.rate)}%</td><td>${credit.termMonths}</td><td>${credit.startDate}</td>" +
@@ -947,4 +951,199 @@ internal suspend fun AppServer.adminUsersPage(
         )
     )
     return layoutPage("Users", session, content)
+}
+
+internal suspend fun AppServer.productionRequestsPage(
+    session: AuthSession,
+    list: List<ProductionRequest>,
+    productsList: List<FinishedProduct>
+): String {
+    val statusClass = { s: String ->
+        when (s) {
+            RequestStatus.COMPLETED -> "req-status-completed"
+            RequestStatus.ERROR -> "req-status-error"
+            RequestStatus.PRODUCTION -> "req-status-production"
+            RequestStatus.SALES -> "req-status-sales"
+            RequestStatus.PROCUREMENT -> "req-status-procurement"
+            RequestStatus.RAW_MATERIAL_CHECK -> "req-status-check"
+            else -> "req-status-created"
+        }
+    }
+    val requestCards = if (list.isEmpty()) {
+        "<div class=\"req-empty\">No production requests yet. Submit the first one using the form.</div>"
+    } else {
+        list.joinToString("\n") { r ->
+            val statusBadge = "<span class=\"req-status-badge ${statusClass(r.status)}\">${html(r.status)}</span>"
+            val rejectionBlock = if (!r.rejectionReason.isNullOrBlank())
+                "<div class=\"req-rejection\"><span class=\"req-rejection-label\">Rejection reason:</span> ${html(r.rejectionReason)}</div>" else ""
+            val processAction = if (r.status == RequestStatus.CREATED && canEdit(session, MODULE_PRODUCTION_REQUESTS)) {
+                "<form method=\"post\" action=\"/production-requests/process\" class=\"action-form\">" +
+                    "<input type=\"hidden\" name=\"id\" value=\"${r.id}\"/>" +
+                    "<button type=\"submit\" class=\"action-link action-link-edit\">Process</button></form>"
+            } else ""
+            val deleteAction = if (canDelete(session, MODULE_PRODUCTION_REQUESTS)) {
+                "<form method=\"post\" action=\"/production-requests/delete\" class=\"action-form\">" +
+                    "<input type=\"hidden\" name=\"id\" value=\"${r.id}\"/>" +
+                    "<button type=\"submit\" class=\"action-link action-link-delete\">Delete</button></form>"
+            } else ""
+            """
+            <article class="req-card">
+                <div class="req-card-header">
+                    <div class="req-card-meta">
+                        <span class="req-id">Request #${r.id}</span>
+                        <span class="req-date">${r.createdAt.toLocalDate()}</span>
+                    </div>
+                    $statusBadge
+                </div>
+                <div class="req-card-body">
+                    <div class="req-field">
+                        <span class="req-field-label">Applicant</span>
+                        <span class="req-field-value">${html(r.applicantName)}</span>
+                    </div>
+                    <div class="req-field">
+                        <span class="req-field-label">Product</span>
+                        <span class="req-field-value">${html(r.productName ?: r.productId.toString())}</span>
+                    </div>
+                    <div class="req-field">
+                        <span class="req-field-label">Quantity</span>
+                        <span class="req-field-value">${format3(r.quantity)}</span>
+                    </div>
+                    <div class="req-field">
+                        <span class="req-field-label">Updated</span>
+                        <span class="req-field-value">${r.updatedAt.toLocalDate()}</span>
+                    </div>
+                </div>
+                $rejectionBlock
+                ${if (processAction.isNotBlank() || deleteAction.isNotBlank()) "<div class=\"req-card-actions\">${processAction}${deleteAction}</div>" else ""}
+            </article>
+            """.trimIndent()
+        }
+    }
+    val productOptions = productsList.joinToString("\n") { p ->
+        "<option value=\"${p.id}\">${html(p.name)}</option>"
+    }
+    val formSection = editFormOrNotice(
+        session, MODULE_PRODUCTION_REQUESTS,
+        """
+        <section class="section-card">
+            <h2>New production request</h2>
+            <p class="field-hint">Submit a request to automatically produce and sell the specified quantity. The system will handle procurement, production, and sales.</p>
+            <form method="post" action="/production-requests/submit" class="managed-form">
+                <div>
+                    <label>Applicant full name</label>
+                    <input name="applicantName" />
+                </div>
+                <div>
+                    <label>Product</label>
+                    <select name="productId">$productOptions</select>
+                </div>
+                <div>
+                    <label>Quantity</label>
+                    <input name="quantity" type="number" step="0.001" min="0.001" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit">Submit request</button>
+                </div>
+            </form>
+        </section>
+        """.trimIndent(),
+        "Submitting production requests is not allowed for your roles."
+    )
+    val content = templates.render(
+        "pages/production-requests.html",
+        mapOf("formSection" to formSection, "requestCards" to requestCards)
+    )
+    return layoutPage("Production Requests", session, content)
+}
+
+private val dateFmt = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")
+
+internal fun AppServer.publicRequestPage(
+    productsList: List<FinishedProduct>,
+    submittedId: Int?,
+    queriedId: Int?,
+    queriedRequest: ProductionRequest?
+): String {
+    val productOptions = productsList.joinToString("\n") { p ->
+        "<option value=\"${p.id}\">${html(p.name)}</option>"
+    }
+
+    val notification = when {
+        submittedId != null -> """
+            <div class="pr-notification pr-notify-success">
+                <i class="fa-solid fa-circle-check pr-notify-icon"></i>
+                <div class="pr-notify-body">
+                    <strong>Request #$submittedId submitted successfully!</strong>
+                    <p>Your production request has been received. Staff will review and process it shortly.</p>
+                    <div class="pr-notify-actions">
+                        <a href="/request/status?id=$submittedId" class="pr-notify-btn">
+                            <i class="fa-solid fa-magnifying-glass"></i> Check status
+                        </a>
+                        <a href="/request" class="pr-notify-btn">
+                            <i class="fa-solid fa-plus"></i> New request
+                        </a>
+                    </div>
+                </div>
+            </div>
+        """.trimIndent()
+        else -> ""
+    }
+
+    val statusResult = when {
+        queriedId != null && queriedRequest == null ->
+            "<div class=\"pr-status-not-found\"><i class=\"fa-solid fa-circle-xmark\"></i> Request #$queriedId not found.</div>"
+        queriedRequest != null -> {
+            val statusClass = when (queriedRequest.status) {
+                RequestStatus.COMPLETED -> "req-status-completed"
+                RequestStatus.ERROR -> "req-status-error"
+                RequestStatus.PRODUCTION -> "req-status-production"
+                RequestStatus.SALES -> "req-status-sales"
+                RequestStatus.PROCUREMENT -> "req-status-procurement"
+                RequestStatus.RAW_MATERIAL_CHECK -> "req-status-check"
+                else -> "req-status-created"
+            }
+            val rejRow = if (!queriedRequest.rejectionReason.isNullOrBlank())
+                "<div class=\"pr-status-result-row\"><span class=\"pr-status-result-label\">Reason</span><span class=\"pr-status-result-value\" style=\"color:var(--danger)\">${html(queriedRequest.rejectionReason)}</span></div>"
+            else ""
+            """
+            <div class="pr-status-result">
+                <div class="pr-status-result-row">
+                    <span class="pr-status-result-label">Request ID</span>
+                    <span class="pr-status-result-value">#${queriedRequest.id}</span>
+                </div>
+                <div class="pr-status-result-row">
+                    <span class="pr-status-result-label">Status</span>
+                    <span class="pr-status-result-value"><span class="req-status-badge $statusClass">${html(queriedRequest.status)}</span></span>
+                </div>
+                <div class="pr-status-result-row">
+                    <span class="pr-status-result-label">Product</span>
+                    <span class="pr-status-result-value">${html(queriedRequest.productName ?: queriedRequest.productId.toString())}</span>
+                </div>
+                <div class="pr-status-result-row">
+                    <span class="pr-status-result-label">Quantity</span>
+                    <span class="pr-status-result-value">${format3(queriedRequest.quantity)}</span>
+                </div>
+                <div class="pr-status-result-row">
+                    <span class="pr-status-result-label">Applicant</span>
+                    <span class="pr-status-result-value">${html(queriedRequest.applicantName)}</span>
+                </div>
+                <div class="pr-status-result-row">
+                    <span class="pr-status-result-label">Submitted</span>
+                    <span class="pr-status-result-value">${queriedRequest.createdAt.format(dateFmt)}</span>
+                </div>
+                $rejRow
+            </div>
+            """.trimIndent()
+        }
+        else -> ""
+    }
+
+    return templates.render(
+        "public-request.html",
+        mapOf(
+            "productOptions" to productOptions,
+            "notification" to notification,
+            "statusResult" to statusResult
+        )
+    )
 }

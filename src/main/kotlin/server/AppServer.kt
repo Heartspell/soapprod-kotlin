@@ -12,6 +12,7 @@ import io.vertx.kotlin.coroutines.coAwait
 import java.nio.file.Paths
 import repositories.*
 import services.CreditService
+import services.ProductionRequestService
 import services.PurchaseService
 import services.SaleService
 import templates.TemplateRenderer
@@ -36,9 +37,15 @@ class AppServer(
     internal val salaries = SalaryPaymentRepository(db.pool)
     internal val credits = CreditRepository(db.pool)
 
+    internal val productionRequests = ProductionRequestRepository(db.pool)
+
     internal val purchaseService = PurchaseService(purchases)
     internal val saleService = SaleService(productSales)
     internal val creditService = CreditService(credits)
+    internal val productionRequestService = ProductionRequestService(
+        productionRequests, ingredients, rawMaterials, budgets,
+        purchases, production, productSales, employees, products
+    )
 
     internal val authRepo = AuthRepository(db.pool)
     internal val authService = AuthService(authRepo)
@@ -48,6 +55,7 @@ class AppServer(
     suspend fun start(port: Int = 8080): HttpServer {
         authService.ensureSeed()
         creditService.ensureSchema()
+        productionRequestService.ensureSchema()
 
         val router = Router.router(vertx)
         router.route().handler(BodyHandler.create())

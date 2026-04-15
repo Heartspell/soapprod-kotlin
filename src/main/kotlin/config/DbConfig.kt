@@ -20,7 +20,8 @@ data class DbConfig(
     companion object {
         fun fromEnv(env: Map<String, String>): DbConfig {
             val fileProps = loadDbProperties()
-            val connectionString = firstNonBlank(env["DB_CONNECTION_STRING"], fileProps.getProperty("db.connectionString"))
+            val connectionString =
+                firstNonBlank(env["DB_CONNECTION_STRING"], fileProps.getProperty("db.connectionString"))
             val host = firstNonBlank(env["DB_HOST"], fileProps.getProperty("db.host")) ?: "DESKTOP-6CEGSEJ"
             val port = firstNonBlank(env["DB_PORT"], fileProps.getProperty("db.port"))?.toIntOrNull() ?: 1433
             val database = firstNonBlank(env["DB_NAME"], fileProps.getProperty("db.name")) ?: "SoapProduction"

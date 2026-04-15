@@ -10,7 +10,4 @@ services:
       - "1433:1433"
     volumes:
       - ./SoapProduction.bak:/var/opt/mssql/backup/SoapProduction.bak
-      - mssql-data:/var/opt/mssql/data
-
-volumes:
-  mssql-data:
+      - ./data/mssql:/var/opt/mssql/data

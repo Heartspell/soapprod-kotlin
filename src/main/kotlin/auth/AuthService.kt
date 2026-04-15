@@ -19,7 +19,14 @@ class AuthService(private val repo: AuthRepository) {
         val user = repo.getUserAuth(username.trim()) ?: return null
         if (!user.isActive) return null
         if (!verifyPassword(password, user.passwordHash, user.passwordSalt)) return null
-        return AuthSession(user.id, user.username, user.roles.toSet(), user.modulePermissions, user.canEdit, user.canDelete)
+        return AuthSession(
+            user.id,
+            user.username,
+            user.roles.toSet(),
+            user.modulePermissions,
+            user.canEdit,
+            user.canDelete
+        )
     }
 
     fun createPasswordHash(password: String): Pair<ByteArray, ByteArray> {

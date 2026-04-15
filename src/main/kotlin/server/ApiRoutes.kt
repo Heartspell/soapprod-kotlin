@@ -10,6 +10,7 @@ import models.MeasurementUnit
 import models.MODULE_PERMISSION_LABELS
 import models.Position
 import models.RawMaterial
+import services.ValidationException
 
 internal fun AppServer.registerApiRoutes(router: Router) {
     router.get("/api/session").handler { ctx ->
@@ -370,6 +371,33 @@ internal fun AppServer.registerApiRoutes(router: Router) {
     router.post("/api/salaries/rollback").coroutineHandler { ctx ->
         requireApiAuth(ctx, null, SessionPermission.DELETE, MODULE_SALARY) ?: return@coroutineHandler
         salaries.deleteLast()
+        apiJson(ctx, mapOf("ok" to true))
+    }
+
+    router.get("/api/production-requests").coroutineHandler { ctx ->
+        requireApiAuth(ctx, setOf("Admin", "Production")) ?: return@coroutineHandler
+        apiJson(ctx, productionRequestService.listAll())
+    }
+    router.post("/api/production-requests").coroutineHandler { ctx ->
+        requireApiAuth(ctx, setOf("Admin", "Production"), SessionPermission.EDIT, MODULE_PRODUCTION_REQUESTS) ?: return@coroutineHandler
+        val body = jsonBody(ctx)
+        val applicantName = body.getString("applicantName")?.trim().orEmpty()
+        val productId = body.getInteger("productId")
+        val quantity = body.getDouble("quantity")
+        if (applicantName.isBlank() || productId == null || quantity == null) {
+            apiError(ctx, 400, "Applicant name, product and quantity are required"); return@coroutineHandler
+        }
+        try {
+            val id = productionRequestService.submit(applicantName, productId, quantity)
+            apiJson(ctx, mapOf("ok" to true, "id" to id))
+        } catch (e: ValidationException) {
+            apiError(ctx, 400, e.message ?: "Validation error")
+        }
+    }
+    router.delete("/api/production-requests/:id").coroutineHandler { ctx ->
+        requireApiAuth(ctx, setOf("Admin", "Production"), SessionPermission.DELETE, MODULE_PRODUCTION_REQUESTS) ?: return@coroutineHandler
+        val pathId = ctx.pathParam("id")?.toIntOrNull() ?: 0
+        if (pathId > 0) productionRequestService.delete(pathId)
         apiJson(ctx, mapOf("ok" to true))
     }
 

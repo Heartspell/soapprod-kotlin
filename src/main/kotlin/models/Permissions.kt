@@ -12,6 +12,7 @@ val MODULE_PERMISSION_LABELS: LinkedHashMap<String, String> = linkedMapOf(
     "production" to "Production",
     "sales" to "Sales",
     "budget" to "Budget",
+    "production_requests" to "Production Requests",
     "users" to "Users"
 )
 

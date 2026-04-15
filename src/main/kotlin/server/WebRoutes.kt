@@ -3,6 +3,7 @@ package server
 import io.vertx.ext.web.Router
 import models.Employee
 import models.FinishedProduct
+import services.ValidationException
 import models.Ingredient
 import models.MeasurementUnit
 import models.Position
@@ -419,6 +420,86 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         if (paymentAmount == null) { badRequest(ctx, "Payment amount is required"); return@coroutineHandler }
         creditService.pay(id, paymentAmount)
         redirect(ctx, "/budget")
+    }
+
+    // Public production request portal (no auth required)
+    router.get("/request").coroutineHandler { ctx ->
+        val submittedId = ctx.request().getParam("submitted")?.toIntOrNull()
+        val productsList = products.listAll()
+        ctx.response()
+            .putHeader("Content-Type", "text/html; charset=utf-8")
+            .end(publicRequestPage(productsList, submittedId, null, null))
+    }
+
+    router.post("/request/submit").coroutineHandler { ctx ->
+        val applicantName = ctx.request().getParam("applicantName")?.trim().orEmpty()
+        val productId = ctx.request().getParam("productId")?.toIntOrNull()
+        val quantity = ctx.request().getParam("quantity")?.toDoubleOrNull()
+        if (applicantName.isBlank() || productId == null || quantity == null) {
+            redirect(ctx, "/request?error=Applicant+name%2C+product+and+quantity+are+required")
+            return@coroutineHandler
+        }
+        val id = try {
+            productionRequestService.createOnly(applicantName, productId, quantity)
+        } catch (e: ValidationException) {
+            redirect(ctx, "/request?error=${java.net.URLEncoder.encode(e.message ?: "Validation error", "UTF-8")}")
+            return@coroutineHandler
+        }
+        redirect(ctx, "/request?submitted=$id")
+    }
+
+    router.get("/request/status").coroutineHandler { ctx ->
+        val id = ctx.request().getParam("id")?.toIntOrNull()
+        val request = if (id != null) productionRequestService.getById(id) else null
+        val productsList = products.listAll()
+        ctx.response()
+            .putHeader("Content-Type", "text/html; charset=utf-8")
+            .end(publicRequestPage(productsList, null, id, request))
+    }
+
+    router.get("/production-requests").coroutineHandler { ctx ->
+        val session = requireAuth(ctx, setOf("Admin", "Production")) ?: return@coroutineHandler
+        ctx.response()
+            .putHeader("Content-Type", "text/html; charset=utf-8")
+            .end(productionRequestsPage(session, productionRequestService.listAll(), products.listAll()))
+    }
+
+    router.post("/production-requests/submit").coroutineHandler { ctx ->
+        requireAuth(ctx, setOf("Admin", "Production"), SessionPermission.EDIT, MODULE_PRODUCTION_REQUESTS) ?: return@coroutineHandler
+        val applicantName = ctx.request().getParam("applicantName")?.trim().orEmpty()
+        val productId = ctx.request().getParam("productId")?.toIntOrNull()
+        val quantity = ctx.request().getParam("quantity")?.toDoubleOrNull()
+        if (applicantName.isBlank() || productId == null || quantity == null) {
+            badRequest(ctx, "Applicant name, product and quantity are required"); return@coroutineHandler
+        }
+        try {
+            productionRequestService.submit(applicantName, productId, quantity)
+        } catch (e: ValidationException) {
+            badRequest(ctx, e.message ?: "Validation error"); return@coroutineHandler
+        } catch (e: Exception) {
+            badRequest(ctx, "Processing failed: ${e.message}"); return@coroutineHandler
+        }
+        redirect(ctx, "/production-requests")
+    }
+
+    router.post("/production-requests/process").coroutineHandler { ctx ->
+        requireAuth(ctx, setOf("Admin", "Production"), SessionPermission.EDIT, MODULE_PRODUCTION_REQUESTS) ?: return@coroutineHandler
+        val id = ctx.request().getParam("id")?.toIntOrNull() ?: 0
+        if (id > 0) {
+            try {
+                productionRequestService.processById(id)
+            } catch (e: ValidationException) {
+                badRequest(ctx, e.message ?: "Processing failed"); return@coroutineHandler
+            }
+        }
+        redirect(ctx, "/production-requests")
+    }
+
+    router.post("/production-requests/delete").coroutineHandler { ctx ->
+        requireAuth(ctx, setOf("Admin", "Production"), SessionPermission.DELETE, MODULE_PRODUCTION_REQUESTS) ?: return@coroutineHandler
+        val id = ctx.request().getParam("id")?.toIntOrNull() ?: 0
+        if (id > 0) productionRequestService.delete(id)
+        redirect(ctx, "/production-requests")
     }
 
     router.post("/credits/delete").coroutineHandler { ctx ->

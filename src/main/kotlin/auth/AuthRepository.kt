@@ -11,6 +11,32 @@ class AuthRepository(private val pool: Pool) {
     suspend fun ensureSchema() {
         pool.query("EXEC sp_EnsureAuthSchema").execute().coAwait()
         pool.query("EXEC sp_EnsureRolePermissionsSchema").execute().coAwait()
+        // Override sp_SaveRolePermissions: the original validates module keys against an
+        // internal lookup table and throws "Module not found" for unknown keys.
+        // Replace it with a plain UPSERT so any module key (including production_requests) works.
+        pool.query(
+            """
+            CREATE OR ALTER PROCEDURE sp_SaveRolePermissions
+                @RoleId    INT,
+                @ModuleKey NVARCHAR(100),
+                @CanEdit   BIT,
+                @CanDelete BIT
+            AS
+            BEGIN
+                SET NOCOUNT ON;
+                IF EXISTS (
+                    SELECT 1 FROM RolePermissions
+                    WHERE RoleId = @RoleId AND ModuleKey = @ModuleKey
+                )
+                    UPDATE RolePermissions
+                    SET CanEdit = @CanEdit, CanDelete = @CanDelete
+                    WHERE RoleId = @RoleId AND ModuleKey = @ModuleKey;
+                ELSE
+                    INSERT INTO RolePermissions (RoleId, ModuleKey, CanEdit, CanDelete)
+                    VALUES (@RoleId, @ModuleKey, @CanEdit, @CanDelete);
+            END
+            """.trimIndent()
+        ).execute().coAwait()
     }
 
     suspend fun getRoles(): List<RoleItem> {

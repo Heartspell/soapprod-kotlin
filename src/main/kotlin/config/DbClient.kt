@@ -28,5 +28,7 @@ class DbClient(val pool: Pool) {
         }
     }
 
-    suspend fun close() { pool.close().coAwait() }
+    suspend fun close() {
+        pool.close().coAwait()
+    }
 }

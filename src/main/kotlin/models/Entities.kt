@@ -3,6 +3,28 @@ package models
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
+data class ProductionRequest(
+    val id: Int,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime,
+    val status: String,
+    val applicantName: String,
+    val productId: Int,
+    val quantity: Double,
+    val rejectionReason: String?,
+    val productName: String?
+)
+
+object RequestStatus {
+    const val CREATED = "Created"
+    const val RAW_MATERIAL_CHECK = "Under raw material availability check"
+    const val PROCUREMENT = "In the process of raw material procurement"
+    const val PRODUCTION = "In the production process"
+    const val SALES = "In the sales process"
+    const val COMPLETED = "Completed"
+    const val ERROR = "Error"
+}
+
 data class Employee(
     val id: Int,
     val fullName: String,

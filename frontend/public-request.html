@@ -1,0 +1,222 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Submit Production Request</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/modern-normalize/3.0.1/modern-normalize.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Manrope:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="public-request-page">
+    <div class="page-loader">
+        <div class="page-loader-box">
+            <span class="page-loader-dot"></span>
+            <span class="page-loader-text">Loading</span>
+        </div>
+    </div>
+
+    <header class="pr-header">
+        <div class="pr-header-inner">
+            <div class="pr-logo">
+                <i class="fa-solid fa-soap pr-logo-icon"></i>
+                <div>
+                    <span class="pr-logo-brand">Soap Production</span>
+                    <span class="pr-logo-sub">Customer Portal</span>
+                </div>
+            </div>
+            <a href="/login" class="pr-staff-link">
+                <i class="fa-solid fa-lock"></i>
+                Staff login
+            </a>
+        </div>
+    </header>
+
+    <main class="pr-main">
+        <div class="pr-container">
+
+            {{notification}}
+
+            <div class="pr-layout">
+                <div class="pr-info-col">
+                    <div class="pr-hero">
+                        <h1 class="pr-hero-title">Submit a production request</h1>
+                        <p class="pr-hero-desc">Fill in the form to order production of your product. Our team will handle procurement, manufacturing, and delivery automatically.</p>
+                    </div>
+
+                    <div class="pr-steps">
+                        <div class="pr-steps-title">How it works</div>
+                        <ol class="pr-steps-list">
+                            <li class="pr-step">
+                                <span class="pr-step-num">1</span>
+                                <div class="pr-step-body">
+                                    <strong>Submit request</strong>
+                                    <span>Fill in applicant name, product and quantity</span>
+                                </div>
+                            </li>
+                            <li class="pr-step">
+                                <span class="pr-step-num">2</span>
+                                <div class="pr-step-body">
+                                    <strong>Raw material check</strong>
+                                    <span>We verify stock availability for all ingredients</span>
+                                </div>
+                            </li>
+                            <li class="pr-step">
+                                <span class="pr-step-num">3</span>
+                                <div class="pr-step-body">
+                                    <strong>Procurement</strong>
+                                    <span>Any missing materials are purchased automatically</span>
+                                </div>
+                            </li>
+                            <li class="pr-step">
+                                <span class="pr-step-num">4</span>
+                                <div class="pr-step-body">
+                                    <strong>Production</strong>
+                                    <span>Your product is manufactured by our team</span>
+                                </div>
+                            </li>
+                            <li class="pr-step">
+                                <span class="pr-step-num">5</span>
+                                <div class="pr-step-body">
+                                    <strong>Sales &amp; delivery</strong>
+                                    <span>Completed order is registered and ready</span>
+                                </div>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="pr-form-col">
+                    <div class="pr-card">
+                        <div class="pr-card-header">
+                            <i class="fa-solid fa-file-invoice pr-card-icon"></i>
+                            <div>
+                                <h2 class="pr-card-title">New request</h2>
+                                <p class="pr-card-desc">All fields are required</p>
+                            </div>
+                        </div>
+
+                        <form method="post" action="/request/submit" class="pr-form" id="pr-form">
+                            <div class="pr-field">
+                                <label class="pr-label" for="applicantName">
+                                    <i class="fa-solid fa-user"></i>
+                                    Applicant full name
+                                </label>
+                                <input
+                                    class="pr-input"
+                                    id="applicantName"
+                                    name="applicantName"
+                                    type="text"
+                                    placeholder="e.g. Ivan Petrov"
+                                    autocomplete="name"
+                                    required
+                                />
+                            </div>
+
+                            <div class="pr-field">
+                                <label class="pr-label" for="productId">
+                                    <i class="fa-solid fa-cube"></i>
+                                    Product
+                                </label>
+                                <select class="pr-input pr-select" id="productId" name="productId" required>
+                                    <option value="" disabled selected>Select a product…</option>
+                                    {{productOptions}}
+                                </select>
+                            </div>
+
+                            <div class="pr-field">
+                                <label class="pr-label" for="quantity">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                    Quantity
+                                </label>
+                                <input
+                                    class="pr-input"
+                                    id="quantity"
+                                    name="quantity"
+                                    type="number"
+                                    step="0.001"
+                                    min="0.001"
+                                    placeholder="e.g. 100"
+                                    required
+                                />
+                            </div>
+
+                            <button type="submit" class="pr-submit-btn" id="pr-submit-btn">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                Submit request
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="pr-card pr-status-card">
+                        <div class="pr-card-header">
+                            <i class="fa-solid fa-magnifying-glass pr-card-icon"></i>
+                            <div>
+                                <h2 class="pr-card-title">Check request status</h2>
+                                <p class="pr-card-desc">Enter your request ID to see its current status</p>
+                            </div>
+                        </div>
+
+                        <form method="get" action="/request/status" class="pr-form pr-status-form">
+                            <div class="pr-status-row">
+                                <input
+                                    class="pr-input"
+                                    name="id"
+                                    type="number"
+                                    min="1"
+                                    placeholder="Request ID"
+                                    required
+                                />
+                                <button type="submit" class="pr-check-btn">
+                                    <i class="fa-solid fa-search"></i>
+                                    Check
+                                </button>
+                            </div>
+                        </form>
+
+                        {{statusResult}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="pr-footer">
+        <div class="pr-footer-inner">
+            <span>Soap Production — internal production management system</span>
+        </div>
+    </footer>
+</body>
+<script>
+(() => {
+    const loader = document.querySelector('.page-loader');
+    window.addEventListener('load', () => {
+        if (!loader) return;
+        loader.style.opacity = '0';
+        loader.style.transition = 'opacity 0.3s';
+        window.setTimeout(() => { loader.style.display = 'none'; }, 320);
+    });
+
+    const form = document.getElementById('pr-form');
+    const btn = document.getElementById('pr-submit-btn');
+    if (form && btn) {
+        form.addEventListener('submit', () => {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting…';
+        });
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error) {
+        alert(error);
+        params.delete('error');
+        const next = params.toString();
+        const url = window.location.pathname + (next ? '?' + next : '');
+        window.history.replaceState({}, '', url);
+    }
+})();
+</script>
+</html>

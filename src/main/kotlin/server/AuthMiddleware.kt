@@ -98,6 +98,7 @@ internal fun navigationItems(session: AuthSession): List<Map<String, String>> {
     if (hasRole(session, "Admin") || hasRole(session, "Production")) {
         items.add(mapOf("to" to "/ingredients", "label" to "Ingredients list", "group" to "Recipes and stock"))
         items.add(mapOf("to" to "/production", "label" to "Production", "group" to "Operations"))
+        items.add(mapOf("to" to "/production-requests", "label" to "Production Requests", "group" to "Operations"))
     }
     if (hasRole(session, "Admin") || hasRole(session, "Sales")) {
         items.add(mapOf("to" to "/sales", "label" to "Sales", "group" to "Operations"))

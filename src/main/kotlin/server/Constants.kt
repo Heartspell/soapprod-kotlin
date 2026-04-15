@@ -2,7 +2,8 @@ package server
 
 internal enum class SessionPermission { EDIT, DELETE }
 
-internal const val SALE_MARKUP = 0.15
+internal const val SALE_MARKUP = 0.30
+internal const val MODULE_PRODUCTION_REQUESTS = "production_requests"
 internal const val MODULE_UNITS = "units"
 internal const val MODULE_POSITIONS = "positions"
 internal const val MODULE_EMPLOYEES = "employees"
