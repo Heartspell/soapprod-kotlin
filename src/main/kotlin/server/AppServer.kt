@@ -1,8 +1,5 @@
 package server
 
-import auth.AuthRepository
-import auth.AuthService
-import auth.AuthSession
 import config.DbClient
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServer
@@ -10,7 +7,9 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.kotlin.coroutines.coAwait
 import java.nio.file.Paths
+import models.AuthSession
 import repositories.*
+import services.AuthService
 import services.CreditService
 import services.ProductionRequestService
 import services.PurchaseService

@@ -71,6 +71,10 @@ ALTER ROLE db_owner ADD MEMBER [administrator];
 "
 
 echo ""
+echo "Applying application stored procedures..."
+run_sql -d SoapProduction -i "/var/opt/mssql/backup/soapproduction-procedures.sql"
+
+echo ""
 echo "Done!"
 echo "  Host:     localhost:1433"
 echo "  Database: SoapProduction"

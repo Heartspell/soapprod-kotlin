@@ -1,6 +1,5 @@
 package server
 
-import auth.AuthSession
 import models.*
 import models.RequestStatus
 import java.time.format.DateTimeFormatter
@@ -958,6 +957,52 @@ internal suspend fun AppServer.productionRequestsPage(
     list: List<ProductionRequest>,
     productsList: List<FinishedProduct>
 ): String {
+    val requestCards = renderProductionRequestCards(session, list)
+    val productOptions = productsList.joinToString("\n") { p ->
+        "<option value=\"${p.id}\">${html(p.name)}</option>"
+    }
+    val formSection = editFormOrNotice(
+        session, MODULE_PRODUCTION_REQUESTS,
+        """
+        <section class="section-card">
+            <h2>New production request</h2>
+            <p class="field-hint">Submit a request to automatically produce and sell the specified quantity. The system will handle procurement, production, and sales.</p>
+            <form method="post" action="/production-requests/submit" class="managed-form">
+                <div>
+                    <label>Applicant full name</label>
+                    <input name="applicantName" />
+                </div>
+                <div>
+                    <label>Product</label>
+                    <select name="productId">$productOptions</select>
+                </div>
+                <div>
+                    <label>Quantity</label>
+                    <input name="quantity" type="number" step="0.001" min="0.001" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit">Submit request</button>
+                </div>
+            </form>
+        </section>
+        """.trimIndent(),
+        "Submitting production requests is not allowed for your roles."
+    )
+    val content = templates.render(
+        "pages/production-requests.html",
+        mapOf(
+            "formSection" to formSection,
+            "requestCards" to requestCards,
+            "requestCardsSignature" to html(productionRequestSignature(list))
+        )
+    )
+    return layoutPage("Production Requests", session, content)
+}
+
+internal fun AppServer.renderProductionRequestCards(
+    session: AuthSession,
+    list: List<ProductionRequest>
+): String {
     val statusClass = { s: String ->
         when (s) {
             RequestStatus.COMPLETED -> "req-status-completed"
@@ -969,7 +1014,7 @@ internal suspend fun AppServer.productionRequestsPage(
             else -> "req-status-created"
         }
     }
-    val requestCards = if (list.isEmpty()) {
+    return if (list.isEmpty()) {
         "<div class=\"req-empty\">No production requests yet. Submit the first one using the form.</div>"
     } else {
         list.joinToString("\n") { r ->
@@ -1019,42 +1064,12 @@ internal suspend fun AppServer.productionRequestsPage(
             """.trimIndent()
         }
     }
-    val productOptions = productsList.joinToString("\n") { p ->
-        "<option value=\"${p.id}\">${html(p.name)}</option>"
-    }
-    val formSection = editFormOrNotice(
-        session, MODULE_PRODUCTION_REQUESTS,
-        """
-        <section class="section-card">
-            <h2>New production request</h2>
-            <p class="field-hint">Submit a request to automatically produce and sell the specified quantity. The system will handle procurement, production, and sales.</p>
-            <form method="post" action="/production-requests/submit" class="managed-form">
-                <div>
-                    <label>Applicant full name</label>
-                    <input name="applicantName" />
-                </div>
-                <div>
-                    <label>Product</label>
-                    <select name="productId">$productOptions</select>
-                </div>
-                <div>
-                    <label>Quantity</label>
-                    <input name="quantity" type="number" step="0.001" min="0.001" />
-                </div>
-                <div class="form-actions">
-                    <button type="submit">Submit request</button>
-                </div>
-            </form>
-        </section>
-        """.trimIndent(),
-        "Submitting production requests is not allowed for your roles."
-    )
-    val content = templates.render(
-        "pages/production-requests.html",
-        mapOf("formSection" to formSection, "requestCards" to requestCards)
-    )
-    return layoutPage("Production Requests", session, content)
 }
+
+internal fun productionRequestSignature(list: List<ProductionRequest>): String =
+    list.joinToString("|") { request ->
+        "${request.id}:${request.status}:${request.updatedAt}:${request.rejectionReason.orEmpty()}"
+    }
 
 private val dateFmt = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")
 

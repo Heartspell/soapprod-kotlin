@@ -1,5 +1,6 @@
 package repositories
 
+import io.vertx.core.buffer.Buffer
 import io.vertx.sqlclient.Row
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -97,4 +98,29 @@ internal fun Row.getDoubleSafe(column: String): Double? {
         is Number -> value.toDouble()
         else -> null
     }
+}
+
+internal fun Row.getBooleanSafe(column: String): Boolean? {
+    val value = getValueAny(column) ?: return null
+    return when (value) {
+        is Boolean -> value
+        is Number -> value.toInt() != 0
+        is String -> value == "1" || value.equals("true", ignoreCase = true)
+        else -> null
+    }
+}
+
+internal fun Row.getIntSafe(column: String): Int? {
+    val value = getValueAny(column) ?: return null
+    return when (value) {
+        is Int -> value
+        is Short -> value.toInt()
+        is Long -> value.toInt()
+        is Number -> value.toInt()
+        else -> null
+    }
+}
+
+internal fun Row.getBufferSafe(column: String): Buffer? {
+    return getValueAny(column) as? Buffer
 }

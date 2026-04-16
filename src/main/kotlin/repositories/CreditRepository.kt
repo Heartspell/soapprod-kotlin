@@ -10,32 +10,7 @@ class CreditRepository(private val pool: Pool) {
 
     suspend fun ensureSchema() {
         pool.query("EXEC sp_EnsureCreditSchema").execute().coAwait()
-        // Override sp_AddCredit with annuity formula:
-        // M = P * (r/12) * (1 + r/12)^n / ((1 + r/12)^n - 1)
-        pool.query(
-            """
-            CREATE OR ALTER PROCEDURE sp_AddCredit
-                @BankName  NVARCHAR(200),
-                @Amount    FLOAT,
-                @Rate      FLOAT,
-                @TermMonths INT,
-                @StartDate DATE
-            AS
-            BEGIN
-                SET NOCOUNT ON;
-                DECLARE @MonthlyRate FLOAT = @Rate / 100.0 / 12.0;
-                DECLARE @MonthlyPayment FLOAT;
-                IF @MonthlyRate = 0 OR @TermMonths = 0
-                    SET @MonthlyPayment = CASE WHEN @TermMonths > 0 THEN @Amount / @TermMonths ELSE @Amount END;
-                ELSE
-                    SET @MonthlyPayment = @Amount * @MonthlyRate * POWER(1.0 + @MonthlyRate, @TermMonths)
-                                         / (POWER(1.0 + @MonthlyRate, @TermMonths) - 1.0);
-                INSERT INTO Credits (BankName, Amount, Rate, TermMonths, StartDate, MonthlyPayment, RemainingAmount, IsActive)
-                VALUES (@BankName, @Amount, @Rate, @TermMonths, @StartDate, @MonthlyPayment, @Amount, 1);
-                SELECT CAST(SCOPE_IDENTITY() AS INT) AS Id;
-            END
-        """.trimIndent()
-        ).execute().coAwait()
+        pool.query("EXEC sp_SetupCreditProcedures").execute().coAwait()
     }
 
     suspend fun listAll(): List<Credit> {

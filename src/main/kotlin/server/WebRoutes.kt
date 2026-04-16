@@ -464,6 +464,18 @@ internal fun AppServer.registerWebRoutes(router: Router) {
             .end(productionRequestsPage(session, productionRequestService.listAll(), products.listAll()))
     }
 
+    router.get("/production-requests/cards").coroutineHandler { ctx ->
+        val session = requireAuth(ctx, setOf("Admin", "Production")) ?: return@coroutineHandler
+        val requests = productionRequestService.listAll()
+        apiJson(
+            ctx,
+            mapOf(
+                "signature" to productionRequestSignature(requests),
+                "html" to renderProductionRequestCards(session, requests)
+            )
+        )
+    }
+
     router.post("/production-requests/submit").coroutineHandler { ctx ->
         requireAuth(ctx, setOf("Admin", "Production"), SessionPermission.EDIT, MODULE_PRODUCTION_REQUESTS) ?: return@coroutineHandler
         val applicantName = ctx.request().getParam("applicantName")?.trim().orEmpty()

@@ -1,7 +1,7 @@
 package server
 
-import auth.AuthSession
 import io.vertx.ext.web.RoutingContext
+import models.AuthSession
 
 internal fun AppServer.requireAuth(
     ctx: RoutingContext,
