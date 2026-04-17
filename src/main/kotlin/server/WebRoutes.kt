@@ -155,7 +155,50 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         val paymentDate = parseDateTime(ctx.request().getParam("paymentDate"))
         val noteRaw = ctx.request().getParam("note")?.trim()
         val note = if (noteRaw.isNullOrBlank()) null else noteRaw
-        salaries.create(employeeId, amountParam, paymentDate, note)
+        // Enforce: production credits are reserved for production — salary cannot consume them
+        if (amountParam != null && amountParam > 0) {
+            val allCredits = credits.listAll()
+            val productionReserved = allCredits.filter { it.isActive && it.creditType == "PRODUCTION" }.sumOf { it.remainingAmount }
+            val budget = budgets.listAll().firstOrNull()?.budgetAmount ?: 0.0
+            if (budget - amountParam < productionReserved) {
+                redirect(ctx, "/salary?error=Insufficient+funds:+production+credit+funds+cannot+be+used+for+salary")
+                return@coroutineHandler
+            }
+        }
+        val salaryId = salaries.create(employeeId, amountParam, paymentDate, note)
+
+        // TRANSACTION & DOCUMENT LOGGING PATTERN:
+        // 1. Create transaction record with financial details
+        // 2. Create document record linked to the transaction
+        // This example shows how to integrate logging for salary payments
+        if (amountParam != null && amountParam > 0 && salaryId > 0) {
+            val employee = employees.getById(employeeId)
+            val employeeName = employee?.fullName ?: "Employee #$employeeId"
+
+            // Create transaction (debit = payment amount, balance = remaining budget)
+            val currentBudget = budgets.listAll().firstOrNull()?.budgetAmount ?: 0.0
+            val newBalance = currentBudget - amountParam
+            val transactionId = transactionService.logTransaction(
+                type = models.TransactionType.SALARY_PAYMENT,
+                description = "Salary payment to $employeeName",
+                amount = amountParam,
+                debit = amountParam,
+                balance = newBalance,
+                relatedEntityId = salaryId
+            )
+
+            // Create document (optional, for recordkeeping)
+            val documentTitle = "Salary Payment Receipt - $employeeName"
+            val documentDescription = "Payment Date: $paymentDate${if (!note.isNullOrBlank()) "\nNote: $note" else ""}"
+            val documentId = documentService.createDocument(
+                type = models.DocumentType.CREDIT,
+                title = documentTitle,
+                amount = amountParam,
+                description = documentDescription,
+                transactionId = transactionId
+            )
+        }
+
         redirect(ctx, "/salary")
     }
 
@@ -293,7 +336,45 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         if (rawMaterialId == null || quantity == null || unitPrice == null || employeeId == null) {
             badRequest(ctx, "RawMaterialId, Quantity, UnitPrice, EmployeeId are required"); return@coroutineHandler
         }
-        purchaseService.create(rawMaterialId, quantity, unitPrice, purchaseDate, employeeId)
+        // Enforce: salary credits are reserved for salary — purchases cannot consume them
+        val purchaseAmount = quantity * unitPrice
+        val allCredits = credits.listAll()
+        val salaryReserved = allCredits.filter { it.isActive && it.creditType == "SALARY" }.sumOf { it.remainingAmount }
+        val budget = budgets.listAll().firstOrNull()?.budgetAmount ?: 0.0
+        if (budget - purchaseAmount < salaryReserved) {
+            redirect(ctx, "/purchase?error=Insufficient+funds:+salary+credit+funds+cannot+be+used+for+purchases")
+            return@coroutineHandler
+        }
+        val purchaseId = purchaseService.create(rawMaterialId, quantity, unitPrice, purchaseDate, employeeId)
+
+        // TRANSACTION & DOCUMENT LOGGING: Log purchase as financial transaction
+        if (purchaseAmount > 0 && purchaseId > 0) {
+            val rawMaterial = rawMaterials.getById(rawMaterialId)
+            val materialName = rawMaterial?.name ?: "Raw Material #$rawMaterialId"
+
+            // Create transaction (debit = purchase amount, balance = remaining budget)
+            val newBalance = budget - purchaseAmount
+            val transactionId = transactionService.logTransaction(
+                type = models.TransactionType.PURCHASE,
+                description = "Purchase of $materialName - $quantity units @ $unitPrice each",
+                amount = purchaseAmount,
+                debit = purchaseAmount,
+                balance = newBalance,
+                relatedEntityId = purchaseId
+            )
+
+            // Create document (for purchase record)
+            val documentTitle = "Purchase Order - $materialName"
+            val documentDescription = "Quantity: $quantity units\nUnit Price: $unitPrice\nTotal: $purchaseAmount\nDate: $purchaseDate"
+            documentService.createDocument(
+                type = models.DocumentType.PURCHASE,
+                title = documentTitle,
+                amount = purchaseAmount,
+                description = documentDescription,
+                transactionId = transactionId
+            )
+        }
+
         redirect(ctx, "/purchase")
     }
 
@@ -326,7 +407,46 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         if (productId == null || quantity == null || employeeId == null) {
             badRequest(ctx, "ProductId, Quantity, EmployeeId are required"); return@coroutineHandler
         }
-        production.create(productId, quantity, productionDate, employeeId)
+        val productionId = production.create(productId, quantity, productionDate, employeeId)
+
+        // TRANSACTION & DOCUMENT LOGGING: Log production as financial transaction
+        if (productionId > 0) {
+            val product = products.getById(productId)
+            val productName = product?.name ?: "Product #$productId"
+            // Calculate production cost based on product's unit cost (amount / quantity)
+            val unitCost = if (product != null && product.quantity > 0) {
+                product.amount / product.quantity
+            } else {
+                0.0
+            }
+            val productionCost = quantity * unitCost
+
+            if (productionCost > 0) {
+                // Create transaction (debit = production cost, balance = remaining budget)
+                val budget = budgets.listAll().firstOrNull()?.budgetAmount ?: 0.0
+                val newBalance = budget - productionCost
+                val transactionId = transactionService.logTransaction(
+                    type = models.TransactionType.PRODUCTION,
+                    description = "Production of $productName - $quantity units @ $unitCost per unit",
+                    amount = productionCost,
+                    debit = productionCost,
+                    balance = newBalance,
+                    relatedEntityId = productionId
+                )
+
+                // Create document (for production record)
+                val documentTitle = "Production Report - $productName"
+                val documentDescription = "Quantity Produced: $quantity units\nUnit Cost: $unitCost\nTotal Cost: $productionCost\nDate: $productionDate"
+                documentService.createDocument(
+                    type = models.DocumentType.PRODUCTION,
+                    title = documentTitle,
+                    amount = productionCost,
+                    description = documentDescription,
+                    transactionId = transactionId
+                )
+            }
+        }
+
         redirect(ctx, "/production")
     }
 
@@ -359,7 +479,46 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         if (productId == null || quantity == null || employeeId == null) {
             badRequest(ctx, "ProductId, Quantity, EmployeeId are required"); return@coroutineHandler
         }
-        saleService.create(productId, quantity, saleDate, employeeId)
+        val saleId = saleService.create(productId, quantity, saleDate, employeeId)
+
+        // TRANSACTION & DOCUMENT LOGGING: Log sale as financial transaction (revenue)
+        if (saleId > 0) {
+            val product = products.getById(productId)
+            val productName = product?.name ?: "Product #$productId"
+            // Calculate sale amount based on product's unit cost (amount / quantity)
+            val unitCost = if (product != null && product.quantity > 0) {
+                product.amount / product.quantity
+            } else {
+                0.0
+            }
+            val saleAmount = quantity * unitCost
+
+            if (saleAmount > 0) {
+                // Create transaction (debit = sale amount/revenue, balance = remaining budget + revenue)
+                val budget = budgets.listAll().firstOrNull()?.budgetAmount ?: 0.0
+                val newBalance = budget + saleAmount // Sales ADD to budget (revenue)
+                val transactionId = transactionService.logTransaction(
+                    type = models.TransactionType.SALES,
+                    description = "Sale of $productName - $quantity units @ $unitCost per unit",
+                    amount = saleAmount,
+                    debit = saleAmount,
+                    balance = newBalance,
+                    relatedEntityId = saleId
+                )
+
+                // Create document (for sales record)
+                val documentTitle = "Sales Invoice - $productName"
+                val documentDescription = "Quantity Sold: $quantity units\nUnit Price: $unitCost\nTotal Revenue: $saleAmount\nDate: $saleDate"
+                documentService.createDocument(
+                    type = models.DocumentType.SALES,
+                    title = documentTitle,
+                    amount = saleAmount,
+                    description = documentDescription,
+                    transactionId = transactionId
+                )
+            }
+        }
+
         redirect(ctx, "/sales")
     }
 
@@ -406,10 +565,15 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         val termMonths = ctx.request().getParam("termMonths")?.toIntOrNull()
         val startDateStr = ctx.request().getParam("startDate")?.trim() ?: ""
         val startDate = if (startDateStr.isBlank()) null else try { LocalDate.parse(startDateStr) } catch (e: Exception) { null }
-        if (bankName.isBlank() || amount == null || rate == null || termMonths == null || startDate == null) {
-            badRequest(ctx, "Bank, Amount, Rate, Term and Start date are required"); return@coroutineHandler
+        val creditType = ctx.request().getParam("creditType")?.trim().orEmpty()
+        if (bankName.isBlank() || amount == null || rate == null || termMonths == null || startDate == null || creditType.isBlank()) {
+            badRequest(ctx, "Bank, Amount, Rate, Term, Start date and Credit type are required"); return@coroutineHandler
         }
-        creditService.create(bankName, amount, rate, termMonths, startDate)
+        try {
+            creditService.create(bankName, amount, rate, termMonths, startDate, creditType)
+        } catch (e: services.ValidationException) {
+            badRequest(ctx, e.message ?: "Validation error"); return@coroutineHandler
+        }
         redirect(ctx, "/budget")
     }
 
@@ -419,6 +583,18 @@ internal fun AppServer.registerWebRoutes(router: Router) {
         val paymentAmount = ctx.request().getParam("paymentAmount")?.toDoubleOrNull()
         if (paymentAmount == null) { badRequest(ctx, "Payment amount is required"); return@coroutineHandler }
         creditService.pay(id, paymentAmount)
+        redirect(ctx, "/budget")
+    }
+
+    router.post("/credits/pay-monthly").coroutineHandler { ctx ->
+        requireAuth(ctx, setOf("Admin"), SessionPermission.EDIT, MODULE_BUDGET) ?: return@coroutineHandler
+        val id = ctx.request().getParam("id")?.toIntOrNull() ?: 0
+        try {
+            creditService.payMonthly(id)
+        } catch (e: services.ValidationException) {
+            redirect(ctx, "/budget?error=${java.net.URLEncoder.encode(e.message ?: "Error", "UTF-8")}")
+            return@coroutineHandler
+        }
         redirect(ctx, "/budget")
     }
 
@@ -581,5 +757,29 @@ internal fun AppServer.registerWebRoutes(router: Router) {
             )
         }
         redirect(ctx, "/admin/users")
+    }
+
+    router.get("/admin/history").coroutineHandler { ctx ->
+        val session = requireAuth(ctx, setOf("Admin")) ?: return@coroutineHandler
+        val typeFilter = ctx.request().getParam("type")
+        val typeEnum = if (typeFilter != null && typeFilter.isNotBlank()) {
+            try { models.TransactionType.valueOf(typeFilter) } catch (e: Exception) { null }
+        } else null
+        val transactionList = transactionService.listAll(typeEnum)
+        ctx.response()
+            .putHeader("Content-Type", "text/html; charset=utf-8")
+            .end(historyPage(session, transactionList))
+    }
+
+    router.get("/documents").coroutineHandler { ctx ->
+        val session = requireAuth(ctx, null) ?: return@coroutineHandler
+        val typeFilter = ctx.request().getParam("type")
+        val typeEnum = if (typeFilter != null && typeFilter.isNotBlank()) {
+            try { models.DocumentType.valueOf(typeFilter) } catch (e: Exception) { null }
+        } else null
+        val documentList = documentService.listAll(typeEnum)
+        ctx.response()
+            .putHeader("Content-Type", "text/html; charset=utf-8")
+            .end(documentsPage(session, documentList))
     }
 }

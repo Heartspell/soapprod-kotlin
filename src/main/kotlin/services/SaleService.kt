@@ -10,9 +10,9 @@ class SaleService(private val repo: ProductSalesRepository) {
         return repo.listAll()
     }
 
-    suspend fun create(productId: Int, quantity: Double, date: LocalDateTime, employeeId: Int) {
+    suspend fun create(productId: Int, quantity: Double, date: LocalDateTime, employeeId: Int): Int {
         if (quantity <= 0.0) throw ValidationException("Quantity must be greater than 0")
-        repo.create(productId, quantity, date, employeeId)
+        return repo.create(productId, quantity, date, employeeId)
     }
 
     suspend fun delete(id: Int) {

@@ -11,9 +11,11 @@ import models.AuthSession
 import repositories.*
 import services.AuthService
 import services.CreditService
+import services.DocumentService
 import services.ProductionRequestService
 import services.PurchaseService
 import services.SaleService
+import services.TransactionService
 import templates.TemplateRenderer
 
 class AppServer(
@@ -35,12 +37,16 @@ class AppServer(
     internal val budgets = BudgetRepository(db.pool)
     internal val salaries = SalaryPaymentRepository(db.pool)
     internal val credits = CreditRepository(db.pool)
+    internal val transactions = TransactionRepository(db.pool)
+    internal val documents = DocumentRepository(db.pool)
 
     internal val productionRequests = ProductionRequestRepository(db.pool)
 
     internal val purchaseService = PurchaseService(purchases)
     internal val saleService = SaleService(productSales)
-    internal val creditService = CreditService(credits)
+    internal val transactionService = TransactionService(transactions)
+    internal val documentService = DocumentService(documents)
+    internal val creditService = CreditService(credits, transactions)
     internal val productionRequestService = ProductionRequestService(
         productionRequests, ingredients, rawMaterials, budgets,
         purchases, production, productSales, employees, products

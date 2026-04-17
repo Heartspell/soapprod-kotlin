@@ -1,0 +1,39 @@
+<h1>Audit log</h1>
+<p class="page-intro">Complete audit log of all financial transactions (admin only).</p>
+
+<section class="section-card">
+    <div class="history-controls">
+        <form method="get" class="filter-form">
+            <label>Filter by Type</label>
+            <select name="type" onchange="this.form.submit()">
+                <option value="">All Transactions</option>
+                <option value="SALARY_PAYMENT">Salary Payments</option>
+                <option value="PURCHASE">Purchases</option>
+                <option value="PRODUCTION">Production</option>
+                <option value="SALES">Sales</option>
+                <option value="CREDIT_PAYMENT">Credit Payments</option>
+                <option value="CREDIT_PAYMENT_MONTHLY">Monthly Payments</option>
+                <option value="CREDIT_CREATED">Credits Created</option>
+            </select>
+        </form>
+    </div>
+
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Debit</th>
+                    <th>Balance</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{transactionRows}}
+            </tbody>
+        </table>
+    </div>
+</section>

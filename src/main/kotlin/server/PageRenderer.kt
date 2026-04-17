@@ -11,7 +11,7 @@ internal fun AppServer.loginPage(error: String?): String {
 
 internal suspend fun AppServer.layoutPage(title: String, session: AuthSession, content: String): String {
     val budget = budgets.listAll().firstOrNull()?.budgetAmount
-    val budgetLabel = budget?.toString() ?: "-"
+    val budgetLabel = budget?.let { format2(it) } ?: "-"
     val creditFunds = creditService.listAll().filter { it.isActive }.sumOf { it.remainingAmount }
     val creditLabel = if (creditFunds > 0.0) {
         "<span class=\"budget-credit-note\">Credit (${format2(creditFunds)})</span>"
@@ -723,45 +723,79 @@ internal suspend fun AppServer.budgetPage(session: AuthSession, list: List<Budge
     val rows = list.joinToString("\n") { b ->
         "<tr><td>${b.id}</td><td>${format2(b.budgetAmount)}</td></tr>"
     }
+    val creditTypeLabel = mapOf(
+        "SALARY" to "Salary credit",
+        "PRODUCTION" to "Production credit"
+    )
     val creditRows = creditList.joinToString("\n") { credit ->
         val statusClass = if (credit.isActive) "is-active" else "is-closed"
         val statusText = if (credit.isActive) "Active" else "Closed"
-        val status = "<span class=\"credit-active-badge $statusClass\">$statusText</span>"
-        val payForm = if (canEdit(session, MODULE_BUDGET)) {
-            "<form method=\"post\" action=\"/credits/pay\" class=\"credit-pay-form\">" +
-                "<input type=\"hidden\" name=\"id\" value=\"${credit.id}\"/>" +
-                "<input name=\"paymentAmount\" placeholder=\"Amount\" class=\"credit-pay-input\"/>" +
-                "<button type=\"submit\" class=\"action-link\">Pay</button></form>"
-        } else ""
-        val deleteForm = if (canDelete(session, MODULE_BUDGET)) {
-            "<form method=\"post\" action=\"/credits/delete\" class=\"action-form\">" +
-                "<input type=\"hidden\" name=\"id\" value=\"${credit.id}\"/>" +
-                "<button type=\"submit\" class=\"action-link action-link-delete\">Delete</button></form>"
-        } else ""
-        "<tr><td>${html(credit.bankName)}</td><td>${format2(credit.amount)}</td>" +
-            "<td>${format2(credit.rate)}%</td><td>${credit.termMonths}</td><td>${credit.startDate}</td>" +
-            "<td>${format2(credit.monthlyPayment)}</td><td>${format2(credit.remainingAmount)}</td><td>$status</td><td>" +
-            listOf(payForm, deleteForm).filter { it.isNotBlank() }.joinToString(" ") +
-            "</td></tr>"
+        val status = "<span class=\"credit-status $statusClass\">$statusText</span>"
+        val typeLabel = creditTypeLabel[credit.creditType] ?: credit.creditType
+        val typeClass = if (credit.creditType == "SALARY") "type-salary" else "type-production"
+        val typeBadge = "<span class=\"type-badge $typeClass\">$typeLabel</span>"
+
+        val actionsHtml = buildString {
+            if (canEdit(session, MODULE_BUDGET) && credit.isActive) {
+                append("<form method=\"post\" action=\"/credits/pay-monthly\" class=\"credit-action-form credit-monthly-form\">")
+                append("<input type=\"hidden\" name=\"id\" value=\"${credit.id}\"/>")
+                append("<button type=\"submit\" class=\"btn-small btn-monthly\" title=\"Auto-pay ${format2(credit.monthlyPayment)}\">")
+                append("<i class=\"fa-solid fa-calendar-check\"></i> Monthly")
+                append("</button></form>")
+            }
+            if (canEdit(session, MODULE_BUDGET) && credit.isActive) {
+                append("<form method=\"post\" action=\"/credits/pay\" class=\"credit-action-form credit-custom-form\">")
+                append("<input type=\"hidden\" name=\"id\" value=\"${credit.id}\"/>")
+                append("<input type=\"number\" step=\"0.01\" name=\"paymentAmount\" placeholder=\"Amount\" class=\"input-small\"/>")
+                append("<button type=\"submit\" class=\"btn-small btn-pay\">Pay</button>")
+                append("</form>")
+            }
+            if (canDelete(session, MODULE_BUDGET)) {
+                append("<form method=\"post\" action=\"/credits/delete\" class=\"credit-action-form\">")
+                append("<input type=\"hidden\" name=\"id\" value=\"${credit.id}\"/>")
+                append("<button type=\"submit\" class=\"btn-small btn-danger\">Delete</button>")
+                append("</form>")
+            }
+        }
+
+        "<tr>" +
+            "<td data-label=\"Type\">$typeBadge</td>" +
+            "<td data-label=\"Bank\">${html(credit.bankName)}</td>" +
+            "<td data-label=\"Amount\" class=\"num\">${format2(credit.amount)}</td>" +
+            "<td data-label=\"Rate\" class=\"num\">${format2(credit.rate)}%</td>" +
+            "<td data-label=\"Months\" class=\"num\">${credit.termMonths}</td>" +
+            "<td data-label=\"Monthly\" class=\"num\">${format2(credit.monthlyPayment)}</td>" +
+            "<td data-label=\"Paid (Debit)\" class=\"num\">${format2(credit.debit)}</td>" +
+            "<td data-label=\"Available (Balance)\" class=\"num font-bold\">${format2(credit.balance)}</td>" +
+            "<td data-label=\"Remaining\" class=\"num font-bold\">${format2(credit.remainingAmount)}</td>" +
+            "<td data-label=\"Status\">$status</td>" +
+            "<td data-label=\"Actions\" class=\"actions-cell\"><div class=\"actions-group\">$actionsHtml</div></td>" +
+            "</tr>"
     }
     val current = list.firstOrNull()?.budgetAmount ?: ""
     val currentValue = list.firstOrNull()?.budgetAmount ?: 0.0
-    val creditFunds = creditList.filter { it.isActive }.sumOf { it.remainingAmount }
+    val activeCreditList = creditList.filter { it.isActive }
+    val salaryCreditFunds = activeCreditList.filter { it.creditType == "SALARY" }.sumOf { it.remainingAmount }
+    val productionCreditFunds = activeCreditList.filter { it.creditType == "PRODUCTION" }.sumOf { it.remainingAmount }
+    val creditFunds = salaryCreditFunds + productionCreditFunds
     val nonCreditFunds = (currentValue - creditFunds).coerceAtLeast(0.0)
     val bankOptions = CREDIT_BANKS.joinToString("\n") { bank ->
         "<option value=\"${html(bank)}\">${html(bank)}</option>"
     }
+    val creditTypeOptions = CREDIT_TYPES.joinToString("\n") { (value, label) ->
+        "<option value=\"$value\">$label</option>"
+    }
     val budgetFormSection = editFormOrNotice(
         session, MODULE_BUDGET,
         """
-        <section class="section-card">
-            <h2>Operating budget</h2>
-            <form method="post" action="/budget/save" class="managed-form compact-form">
-                <div>
-                    <label>Amount</label>
-                    <input name="amount" value="$current" />
+        <section class="section-card form-card">
+            <h2>Operating Budget</h2>
+            <form method="post" action="/budget/save" class="form-simple">
+                <div class="form-group">
+                    <label>Budget Amount</label>
+                    <input type="number" step="0.01" name="amount" value="$current" placeholder="0.00" />
                 </div>
-                <button type="submit">Save budget</button>
+                <button type="submit" class="btn-primary">Save Budget</button>
             </form>
         </section>
         """.trimIndent(),
@@ -770,32 +804,40 @@ internal suspend fun AppServer.budgetPage(session: AuthSession, list: List<Budge
     val creditFormSection = editFormOrNotice(
         session, MODULE_BUDGET,
         """
-        <section class="section-card">
-            <h2>Credit line</h2>
-            <form method="post" action="/credits/save" class="managed-form">
-                <div>
+        <section class="section-card form-card">
+            <h2>New Credit Line</h2>
+            <form method="post" action="/credits/save" class="form-grid">
+                <div class="form-group">
+                    <label>Credit Type</label>
+                    <select name="creditType" required>
+                        <option value="">Select type</option>
+                        $creditTypeOptions
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Bank</label>
-                    <select name="bank">
+                    <select name="bank" required>
+                        <option value="">Select bank</option>
                         $bankOptions
                     </select>
                 </div>
-                <div>
+                <div class="form-group">
                     <label>Amount</label>
-                    <input name="amount" />
+                    <input type="number" step="0.01" name="amount" placeholder="0.00" required />
                 </div>
-                <div>
-                    <label>Rate (%)</label>
-                    <input name="rate" />
+                <div class="form-group">
+                    <label>Annual Rate (%)</label>
+                    <input type="number" step="0.01" name="rate" placeholder="0.00" required />
                 </div>
-                <div>
+                <div class="form-group">
                     <label>Term (months)</label>
-                    <input name="termMonths" />
+                    <input type="number" step="1" name="termMonths" placeholder="12" required />
                 </div>
-                <div>
-                    <label>Start date</label>
-                    <input type="date" name="startDate" />
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" name="startDate" required />
                 </div>
-                <button type="submit">Create credit</button>
+                <button type="submit" class="btn-primary">Create Credit</button>
             </form>
         </section>
         """.trimIndent(),
@@ -804,10 +846,11 @@ internal suspend fun AppServer.budgetPage(session: AuthSession, list: List<Budge
     val content = templates.render(
         "pages/budget.html",
         mapOf(
-            "budgetFormSection" to budgetFormSection,
             "creditFunds" to format2(creditFunds),
             "nonCreditFunds" to format2(nonCreditFunds),
-            "rows" to rows,
+            "salaryCreditFunds" to format2(salaryCreditFunds),
+            "productionCreditFunds" to format2(productionCreditFunds),
+            "budgetFormSection" to budgetFormSection,
             "creditFormSection" to creditFormSection,
             "creditRows" to creditRows
         )
@@ -1161,4 +1204,88 @@ internal fun AppServer.publicRequestPage(
             "statusResult" to statusResult
         )
     )
+}
+
+internal suspend fun AppServer.historyPage(session: AuthSession, list: List<Transaction>): String {
+    val dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    val rows = list.joinToString("\n") { t ->
+        "<tr>" +
+            "<td>${t.id}</td>" +
+            "<td>${html(t.type.name)}</td>" +
+            "<td>${html(t.description)}</td>" +
+            "<td>${format2(t.amount)}</td>" +
+            "<td>${format2(t.debit)}</td>" +
+            "<td>${format2(t.balance)}</td>" +
+            "<td>${t.createdAt.format(dateFmt)}</td>" +
+            "</tr>"
+    }
+    val noData = if (list.isEmpty()) {
+        "<tr><td colspan=\"7\" style=\"text-align: center; color: #999;\">No transactions recorded yet</td></tr>"
+    } else ""
+    val transactionTable = if (list.isNotEmpty()) rows else noData
+
+    val content = """
+        <h1>Transaction History</h1>
+        <p>Audit log of all financial transactions in the system.</p>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Debit</th>
+                    <th>Balance</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                $transactionTable
+            </tbody>
+        </table>
+    """.trimIndent()
+
+    return layoutPage("Transaction History", session, content)
+}
+
+internal suspend fun AppServer.documentsPage(session: AuthSession, list: List<Document>): String {
+    val dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    val rows = list.joinToString("\n") { d ->
+        "<tr>" +
+            "<td>${d.id}</td>" +
+            "<td>${html(d.type.name)}</td>" +
+            "<td>${html(d.title)}</td>" +
+            "<td>${format2(d.amount)}</td>" +
+            "<td>${html(d.description)}</td>" +
+            "<td>${d.createdAt.format(dateFmt)}</td>" +
+            "<td><a href=\"#trans-${d.transactionId}\" style=\"font-size: 0.9em;\">Ref: ${d.transactionId}</a></td>" +
+            "</tr>"
+    }
+    val noData = if (list.isEmpty()) {
+        "<tr><td colspan=\"7\" style=\"text-align: center; color: #999;\">No documents recorded yet</td></tr>"
+    } else ""
+    val documentTable = if (list.isNotEmpty()) rows else noData
+
+    val content = """
+        <h1>Documents</h1>
+        <p>Auto-generated documents for purchases, production, sales, and credit transactions.</p>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Title</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                    <th>Created</th>
+                    <th>Transaction</th>
+                </tr>
+            </thead>
+            <tbody>
+                $documentTable
+            </tbody>
+        </table>
+    """.trimIndent()
+
+    return layoutPage("Documents", session, content)
 }

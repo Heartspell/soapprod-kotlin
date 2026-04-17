@@ -4,6 +4,7 @@ import io.vertx.kotlin.coroutines.coAwait
 import io.vertx.sqlclient.Pool
 import io.vertx.sqlclient.Tuple
 import models.Credit
+import models.CreditType
 import java.time.LocalDate
 
 class CreditRepository(private val pool: Pool) {
@@ -16,9 +17,12 @@ class CreditRepository(private val pool: Pool) {
     suspend fun listAll(): List<Credit> {
         val rows = pool.query("EXEC sp_ListCredits").execute().coAwait()
         return rows.map { row ->
+            val debit = try { row.requireDouble("Debit") } catch (e: Exception) { 0.0 }
+            val amount = row.requireDouble("Amount")
+            val balance = try { row.requireDouble("Balance") } catch (e: Exception) { amount - debit }
             Credit(
                 id = row.requireInt("Id"), bankName = row.requireString("BankName"),
-                amount = row.requireDouble("Amount"), rate = row.requireDouble("Rate"),
+                amount = amount, rate = row.requireDouble("Rate"),
                 termMonths = row.requireInt("TermMonths"), startDate = row.requireLocalDate("StartDate"),
                 monthlyPayment = row.requireDouble("MonthlyPayment"),
                 remainingAmount = row.requireDouble("RemainingAmount"),
@@ -26,16 +30,19 @@ class CreditRepository(private val pool: Pool) {
                     is Boolean -> v
                     is Number -> v.toInt() != 0
                     else -> false
-                }
+                },
+                creditType = try { row.requireString("CreditType") } catch (e: Exception) { CreditType.PRODUCTION.name },
+                debit = debit,
+                balance = balance
             )
         }
     }
 
     suspend fun getById(id: Int): Credit? = listAll().firstOrNull { it.id == id }
 
-    suspend fun create(bankName: String, amount: Double, rate: Double, termMonths: Int, startDate: LocalDate): Int {
-        val rows = pool.preparedQuery("EXEC sp_AddCredit ?, ?, ?, ?, ?")
-            .execute(Tuple.of(bankName, amount, rate, termMonths, startDate)).coAwait()
+    suspend fun create(bankName: String, amount: Double, rate: Double, termMonths: Int, startDate: LocalDate, creditType: String): Int {
+        val rows = pool.preparedQuery("EXEC sp_AddCredit ?, ?, ?, ?, ?, ?")
+            .execute(Tuple.of(bankName, amount, rate, termMonths, startDate, creditType)).coAwait()
         val it = rows.iterator()
         return if (it.hasNext()) it.next().requireInt("Id") else 0
     }
@@ -46,6 +53,18 @@ class CreditRepository(private val pool: Pool) {
         return if (it.hasNext()) it.next().requireInt("Id") else id
     }
 
+    suspend fun payMonthly(id: Int): Int {
+        val rows = pool.preparedQuery("EXEC sp_PayCreditMonthly ?").execute(Tuple.of(id)).coAwait()
+        val it = rows.iterator()
+        return if (it.hasNext()) it.next().requireInt("Id") else id
+    }
+
     suspend fun delete(id: Int): Int =
         pool.preparedQuery("EXEC sp_DeleteCredit ?").execute(Tuple.of(id)).coAwait().rowCount()
+
+    suspend fun updateDebit(id: Int, paymentAmount: Double): Int {
+        val rows = pool.preparedQuery("EXEC sp_UpdateCreditDebit ?, ?").execute(Tuple.of(id, paymentAmount)).coAwait()
+        val it = rows.iterator()
+        return if (it.hasNext()) it.next().requireInt("Id") else id
+    }
 }

@@ -26,3 +26,8 @@ internal val CREDIT_BANKS = listOf(
     "MBank",
     "RSK Bank"
 )
+
+internal val CREDIT_TYPES = listOf(
+    "SALARY" to "Salary credit",
+    "PRODUCTION" to "Production credit"
+)

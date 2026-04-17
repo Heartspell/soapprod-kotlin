@@ -1,0 +1,36 @@
+<h1>Documents</h1>
+<p class="page-intro">Auto-generated documents for all financial transactions.</p>
+
+<section class="section-card">
+    <div class="history-controls">
+        <form method="get" class="filter-form">
+            <label>Filter by Type</label>
+            <select name="type" onchange="this.form.submit()">
+                <option value="">All Documents</option>
+                <option value="PURCHASE">Purchase Documents</option>
+                <option value="PRODUCTION">Production Documents</option>
+                <option value="SALES">Sales Documents</option>
+                <option value="CREDIT">Credit Documents</option>
+            </select>
+        </form>
+    </div>
+
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Title</th>
+                    <th>Amount</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Transaction Ref</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{documentRows}}
+            </tbody>
+        </table>
+    </div>
+</section>

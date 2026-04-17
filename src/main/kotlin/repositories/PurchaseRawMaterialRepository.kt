@@ -34,9 +34,10 @@ class PurchaseRawMaterialRepository(private val pool: Pool) {
     }
 
     suspend fun create(rawMaterialId: Int, quantity: Double, amount: Double, purchaseDate: LocalDateTime, employeeId: Int): Int {
-        pool.preparedQuery("EXEC sp_AddRawMaterialPurchase ?, ?, ?, ?, ?")
+        val rows = pool.preparedQuery("EXEC sp_AddRawMaterialPurchase ?, ?, ?, ?, ?")
             .execute(Tuple.of(rawMaterialId, quantity, amount, purchaseDate, employeeId)).coAwait()
-        return 0
+        val it = rows.iterator()
+        return if (it.hasNext()) it.next().getInteger("Result") ?: 0 else 0
     }
 
     suspend fun update(purchase: PurchaseRawMaterial): Int {

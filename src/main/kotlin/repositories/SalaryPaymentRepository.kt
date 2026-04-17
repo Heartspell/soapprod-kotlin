@@ -33,3 +33,4 @@ class SalaryPaymentRepository(private val pool: Pool) {
         pool.query("EXEC sp_DeleteLastSalaryPayment").execute().coAwait()
     }
 }
+

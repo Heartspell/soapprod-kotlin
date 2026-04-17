@@ -1,40 +1,54 @@
 <h1>Budget</h1>
-<p class="page-intro">Track available funds and active credits in one finance workspace.</p>
+<p class="page-intro">Manage your operating budget and credit lines. Credits are earmarked for specific expenses.</p>
 
-<div class="budget-shell">
-    <div class="budget-forms">
-        <section class="section-card budget-funds-card">
-            <div class="budget-funds-grid">
-                <div>
-                    <label>Credit funds</label>
-                    <strong>{{creditFunds}}</strong>
-                </div>
-                <div>
-                    <label>Non-credit funds</label>
-                    <strong>{{nonCreditFunds}}</strong>
-                </div>
-            </div>
-        </section>
+<div class="budget-container">
+    <!-- Budget Overview Cards -->
+    <section class="budget-summary">
+        <div class="budget-card budget-card-own">
+            <div class="budget-card-label">Own Funds</div>
+            <div class="budget-card-amount">{{nonCreditFunds}}</div>
+        </div>
+        <div class="budget-card budget-card-salary">
+            <div class="budget-card-label">Salary Credit</div>
+            <div class="budget-card-amount">{{salaryCreditFunds}}</div>
+        </div>
+        <div class="budget-card budget-card-production">
+            <div class="budget-card-label">Production Credit</div>
+            <div class="budget-card-amount">{{productionCreditFunds}}</div>
+        </div>
+        <div class="budget-card budget-card-total">
+            <div class="budget-card-label">Total Available</div>
+            <div class="budget-card-amount">{{creditFunds}}</div>
+        </div>
+    </section>
+
+    <!-- Forms Section -->
+    <div class="budget-forms-grid">
         {{budgetFormSection}}
         {{creditFormSection}}
     </div>
 
-    <section class="section-card budget-register-card">
-        <h2>Credits</h2>
-        <div class="budget-table-wrap">
-            <table class="data-table">
-                <tr>
-                    <th>Bank</th>
-                    <th>Amount</th>
-                    <th>Rate</th>
-                    <th>Term</th>
-                    <th>Start</th>
-                    <th>Monthly</th>
-                    <th>Remaining</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-                {{creditRows}}
+    <!-- Credits Table Section -->
+    <section class="section-card budget-credits-section">
+        <h2>Active Credits</h2>
+        <div class="credits-table-wrapper">
+            <table class="credits-table">
+                <thead>
+                    <tr>
+                        <th class="col-type">Type</th>
+                        <th class="col-bank">Bank</th>
+                        <th class="col-amount">Amount</th>
+                        <th class="col-rate">Rate</th>
+                        <th class="col-term">Months</th>
+                        <th class="col-monthly">Monthly</th>
+                        <th class="col-remaining">Remaining</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{creditRows}}
+                </tbody>
             </table>
         </div>
     </section>

@@ -92,6 +92,7 @@ internal fun navigationItems(session: AuthSession): List<Map<String, String>> {
         items.add(mapOf("to" to "/employees", "label" to "Employees", "group" to "Directories"))
     }
     items.add(mapOf("to" to "/salary", "label" to "Salaries", "group" to "Finance"))
+    items.add(mapOf("to" to "/documents", "label" to "Documents", "group" to "Finance"))
     if (hasRole(session, "Admin") || hasRole(session, "Sales") || hasRole(session, "Production")) {
         items.add(mapOf("to" to "/products", "label" to "Products", "group" to "Recipes and stock"))
     }
@@ -107,6 +108,7 @@ internal fun navigationItems(session: AuthSession): List<Map<String, String>> {
     if (hasRole(session, "Admin")) {
         items.add(mapOf("to" to "/budget", "label" to "Budget", "group" to "Finance"))
         items.add(mapOf("to" to "/admin/users", "label" to "Users", "group" to "Administration"))
+        items.add(mapOf("to" to "/admin/history", "label" to "Audit log", "group" to "Administration"))
     }
     return items
 }

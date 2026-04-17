@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{title}}</title>
     <style>
-        @media (max-width: 980px) {
+        @media (max-width: 900px) {
             .app-sidebar {
                 position: fixed;
                 top: 0;
@@ -146,6 +146,8 @@
         if (href.includes('/sales')) iconClass = 'fa-solid fa-cash-register';
         if (href.includes('/reports')) iconClass = 'fa-solid fa-table-list';
         if (href.includes('/budget')) iconClass = 'fa-solid fa-wallet';
+        if (href.includes('/history')) iconClass = 'fa-solid fa-history';
+        if (href.includes('/documents')) iconClass = 'fa-solid fa-file-lines';
         if (href.includes('/admin/users')) iconClass = 'fa-solid fa-user-shield';
         icon.className = `nav-icon ${iconClass}`;
         link.classList.add('nav-link-icon');
